@@ -446,6 +446,18 @@ def run_screen(config: dict, top_n: int | None = None, progress_cb=None) -> tupl
                 f"({risk_off_cap + 1}위 이하는 참고용)"
             )
         ranked_candidates = select_top_candidates(candidate_pool, config, max(top_n * 3, top_n))
+        if len(ranked_candidates) < top_n:
+            # RS/VCP 우선 필터로 풀 자체가 top_n 미만이면 전체 결과에서 확장 보충한다.
+            fallback_pool = full_df[~full_df.index.isin(ranked_candidates.index)]
+            if not fallback_pool.empty:
+                extra = select_top_candidates(fallback_pool, config, top_n * 2)
+                if not extra.empty:
+                    soft_note = "우선 필터(상대강도/수축패턴) 미달 보충 후보"
+                    extra["selection_note"] = extra["selection_note"].map(
+                        lambda note: f"{soft_note}; {note}" if note else soft_note
+                    )
+                    logging.info("Extended %s soft-filter fallback candidates to reach top_n=%s", len(extra), top_n)
+                    ranked_candidates = pd.concat([ranked_candidates, extra])
         top5_df = apply_portfolio_constraints(ranked_candidates, histories, config, top_n)
         if "selection_note" not in top5_df.columns:
             top5_df["selection_note"] = ""
