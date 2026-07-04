@@ -67,7 +67,11 @@ def _num(value, digits: int = 2) -> str:
     return f"{number:,.{digits}f}"
 
 
-def build_telegram_message(top5_df: pd.DataFrame, stats: dict | None = None) -> str:
+def build_telegram_message(
+    top5_df: pd.DataFrame,
+    stats: dict | None = None,
+    force_top5_df: pd.DataFrame | None = None,
+) -> str:
     """Build a Korean Telegram summary message."""
     market_label = stats.get("market_label", "") if stats else ""
     title = f"[{market_label} 전일 차트 기반 Top 5 스크리닝]" if market_label else "[전일 차트 기반 Top 5 스크리닝]"
@@ -149,7 +153,7 @@ def build_telegram_message(top5_df: pd.DataFrame, stats: dict | None = None) -> 
         if metrics:
             lines.append(f"  - 지표: {', '.join(metrics)}")
 
-        # 세부 수급 정보 (외인/기관 비율 등이 있을 경우)
+        # 세부 세력 유입 정보 (외인/기관 비율 등이 있을 경우)
         inflow_details = []
         if not pd.isna(row.get("fi_foreign_pct")):
             inflow_details.append(f"외인 {row.get('fi_foreign_pct')}%")
@@ -160,7 +164,7 @@ def build_telegram_message(top5_df: pd.DataFrame, stats: dict | None = None) -> 
         if force_grade_val and str(force_grade_val) != "nan" and force_grade_val != "disabled":
             inflow_details.append(f"등급: {force_grade_val}")
         if inflow_details:
-            lines.append(f"  - 수급: {', '.join(inflow_details)}")
+            lines.append(f"  - 세력: {', '.join(inflow_details)}")
 
         # 거래 설정 가격 (1차/2차 목표가, 손절가, 손익비, 기대수익률)
         target1_txt = _num(row.get("target1"))
@@ -191,6 +195,33 @@ def build_telegram_message(top5_df: pd.DataFrame, stats: dict | None = None) -> 
             lines.append(f"  - 섹터집중: {row.get('sector_concentration_warning')}")
         if _has_value(row.get("liquidity_warning")):
             lines.append(f"  - 유동성: {row.get('liquidity_warning')}")
+        lines.append("")
+
+    # 세력 점수 기준 별도 랭킹 (종합 Top 5와 독립)
+    if force_top5_df is not None and not force_top5_df.empty:
+        composite_tickers = set(top5_df["ticker"].astype(str)) if "ticker" in top5_df.columns else set()
+        lines.append(f"[세력주 Top {len(force_top5_df)}] (세력 점수 기준 정렬)")
+        for idx, row in force_top5_df.reset_index(drop=True).iterrows():
+            overlap = " ★종합 Top5 포함" if str(row.get("ticker")) in composite_tickers else ""
+            grade = row.get("force_inflow_grade")
+            grade_txt = f", 등급 {grade}" if _has_value(grade) and str(grade) != "disabled" else ""
+            lines.append(
+                f"{idx + 1}. {display_label(row)} — 세력 {row.get('force_inflow_pct')}점{grade_txt}"
+                f" / 종합 {row.get('composite_score')}점 / {_chart(row.get('chart_type'))}{overlap}"
+            )
+            force_details = []
+            if not pd.isna(row.get("fi_foreign_pct")):
+                force_details.append(f"외인 {row.get('fi_foreign_pct')}%")
+            if not pd.isna(row.get("fi_inst_pct")):
+                force_details.append(f"기관 {row.get('fi_inst_pct')}%")
+            if not pd.isna(row.get("fi_foreign_streak")) and int(row.get("fi_foreign_streak", 0)) > 0:
+                force_details.append(f"외인연속 {int(row.get('fi_foreign_streak'))}일")
+            if _has_value(row.get("current_price")):
+                force_details.append(f"현재가 {_num(row.get('current_price'))}")
+            if _has_value(row.get("risk_reward")):
+                force_details.append(f"손익비 {row.get('risk_reward')}")
+            if force_details:
+                lines.append(f"  - {', '.join(force_details)}")
         lines.append("")
 
     if not top5_df.empty:

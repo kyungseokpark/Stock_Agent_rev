@@ -35,6 +35,7 @@ from src.recommendation_quality import (
     apply_soft_candidate_filters,
     build_quality_metrics,
     ranking_score_column,
+    select_force_leaders,
     select_top_candidates,
 )
 from src.ranking import rank_relative_strength
@@ -517,11 +518,19 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _send_optional_notification(config: dict, top5_df: pd.DataFrame, paths: dict, notify: str | None) -> None:
+def _send_optional_notification(
+    config: dict,
+    top5_df: pd.DataFrame,
+    paths: dict,
+    notify: str | None,
+    full_df: pd.DataFrame | None = None,
+) -> None:
     if notify != "telegram":
         return
     token, chat_id = get_telegram_credentials(config)
-    message = build_telegram_message(top5_df, paths.get("stats", {}))
+    top_n = int(config.get("screening", {}).get("top_n", 5))
+    force_top5_df = select_force_leaders(full_df, top_n) if full_df is not None else None
+    message = build_telegram_message(top5_df, paths.get("stats", {}), force_top5_df=force_top5_df)
     send_text_messages(message, token, chat_id)
     if not top5_df.empty:
         prompt = build_claude_mobile_prompt(top5_df, config)
@@ -535,8 +544,8 @@ def run_from_args(args: argparse.Namespace) -> int:
         try:
             config_path = args.config if args.config and len(markets) == 1 else resolve_config_path(market)
             config = load_config(config_path)
-            _, top5_df, paths = run_screen(config=config, top_n=args.top_n)
-            _send_optional_notification(config, top5_df, paths, args.notify)
+            full_df, top5_df, paths = run_screen(config=config, top_n=args.top_n)
+            _send_optional_notification(config, top5_df, paths, args.notify, full_df=full_df)
             logging.info("Processed %s output rows; selected %s rows", market, len(top5_df))
 
             print(f"Screener completed: {market}")

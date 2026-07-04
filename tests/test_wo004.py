@@ -19,3 +19,21 @@ def test_select_top_candidates_prefers_composite_score_when_enabled():
     selected = select_top_candidates(df, config, top_n=1)
 
     assert selected["ticker"].tolist() == ["FORCE"]
+
+
+def test_select_force_leaders_sorts_by_force_score():
+    from src.recommendation_quality import select_force_leaders
+
+    df = pd.DataFrame(
+        [
+            {"ticker": "A", "force_inflow_pct": 40.0, "composite_score": 90, "is_sample_data": False},
+            {"ticker": "B", "force_inflow_pct": 75.5, "composite_score": 50, "is_sample_data": False},
+            {"ticker": "C", "force_inflow_pct": 60.0, "composite_score": 70, "is_sample_data": False},
+            {"ticker": "SAMPLE", "force_inflow_pct": 99.0, "composite_score": 95, "is_sample_data": True},
+            {"ticker": "NOFLOW", "force_inflow_pct": None, "composite_score": 80, "is_sample_data": False},
+        ]
+    )
+
+    leaders = select_force_leaders(df, top_n=3)
+
+    assert leaders["ticker"].tolist() == ["B", "C", "A"]

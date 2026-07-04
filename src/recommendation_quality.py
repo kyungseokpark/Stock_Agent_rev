@@ -179,6 +179,26 @@ def select_top_candidates(full_df: pd.DataFrame, config: dict, top_n: int) -> pd
     return primary
 
 
+def select_force_leaders(full_df: pd.DataFrame, top_n: int = 5) -> pd.DataFrame:
+    """세력 유입 점수(force_inflow_pct) 기준 상위 종목 선정 (세력주 Top N)."""
+    if full_df.empty or "force_inflow_pct" not in full_df.columns:
+        return full_df.head(0).copy()
+    pool = full_df.copy()
+    if "is_sample_data" in pool.columns:
+        pool = pool[~pool["is_sample_data"].fillna(False).astype(bool)]
+    force_values = pd.to_numeric(pool["force_inflow_pct"], errors="coerce")
+    pool = pool[force_values.notna()]
+    if pool.empty:
+        return pool
+    sort_cols = ["force_inflow_pct"]
+    ascending = [False]
+    for col in ("composite_score", "final_score"):
+        if col in pool.columns:
+            sort_cols.append(col)
+            ascending.append(False)
+    return pool.sort_values(sort_cols, ascending=ascending).head(top_n).copy()
+
+
 def ranking_score_column(frame: pd.DataFrame, config: dict) -> str:
     adjustment_cfg = config.get("scoring_adjustment", {})
     if bool(config.get("composite", {}).get("enabled", False)) and "composite_score" in frame.columns:
