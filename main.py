@@ -39,7 +39,7 @@ from src.recommendation_quality import (
 )
 from src.ranking import rank_relative_strength
 from src.portfolio import apply_portfolio_constraints
-from src.report_builder import write_outputs
+from src.report_builder import build_claude_mobile_prompt, write_outputs
 from src.signal_engine import generate_signal
 from src.telegram_sender import build_telegram_message, get_telegram_credentials, send_text_messages
 from src.universe_loader import liquidity_metrics, load_universe
@@ -438,10 +438,23 @@ def run_screen(config: dict, top_n: int | None = None, progress_cb=None) -> tupl
         full_df = add_consecutive_recommendations(full_df, market_region)
         stats["scored_result_count"] = len(full_df)
         candidate_pool = apply_soft_candidate_filters(full_df, config, top_n=top_n, stats=stats, sort_score_col=sort_score_col)
+        risk_off_cap = None
         if bool(config.get("regime", {}).get("enabled", True)) and market_summary.get("market_regime") in {"강한 하락", "하락 주의"}:
-            top_n = min(top_n, int(config.get("regime", {}).get("risk_off_candidate_cap", 2)))
+            risk_off_cap = int(config.get("regime", {}).get("risk_off_candidate_cap", 2))
+            stats["regime_note"] = (
+                f"리스크오프 장세: 원 기준 추천은 상위 {risk_off_cap}개이나, 정보 제공을 위해 {top_n}개 모두 표기 "
+                f"({risk_off_cap + 1}위 이하는 참고용)"
+            )
         ranked_candidates = select_top_candidates(candidate_pool, config, max(top_n * 3, top_n))
         top5_df = apply_portfolio_constraints(ranked_candidates, histories, config, top_n)
+        if "selection_note" not in top5_df.columns:
+            top5_df["selection_note"] = ""
+        if risk_off_cap is not None and len(top5_df) > risk_off_cap:
+            for pos in range(risk_off_cap, len(top5_df)):
+                row_idx = top5_df.index[pos]
+                note = str(top5_df.at[row_idx, "selection_note"] or "")
+                regime_note = f"리스크오프 장세 기준(상위 {risk_off_cap}개) 초과 — 참고용"
+                top5_df.at[row_idx, "selection_note"] = f"{note}; {regime_note}" if note else regime_note
         full_df, top5_df = add_sector_concentration(full_df, top5_df)
         for frame in [full_df, top5_df]:
             for idx, row in frame.iterrows():
@@ -498,6 +511,9 @@ def _send_optional_notification(config: dict, top5_df: pd.DataFrame, paths: dict
     token, chat_id = get_telegram_credentials(config)
     message = build_telegram_message(top5_df, paths.get("stats", {}))
     send_text_messages(message, token, chat_id)
+    if not top5_df.empty:
+        prompt = build_claude_mobile_prompt(top5_df, config)
+        send_text_messages(prompt, token, chat_id)
 
 
 def run_from_args(args: argparse.Namespace) -> int:

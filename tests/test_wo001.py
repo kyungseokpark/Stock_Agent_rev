@@ -18,7 +18,13 @@ def test_select_top_candidates_applies_min_score_gate():
 
     selected = select_top_candidates(df, config, top_n=2)
 
-    assert selected["ticker"].tolist() == ["HIGH"]
+    # 기준 통과 후보가 우선, 미달 후보는 사유가 표기된 보충 후보로 채워 top_n을 유지한다.
+    assert selected["ticker"].tolist() == ["HIGH", "LOW"]
+    assert selected.iloc[0]["selection_note"] == ""
+    assert "기준 미달 보충 후보" in selected.iloc[1]["selection_note"]
+
+    strict_pool = select_top_candidates(df, config, top_n=1)
+    assert strict_pool["ticker"].tolist() == ["HIGH"]
 
 
 def test_run_screen_calls_generate_signal_once_per_eligible_ticker(monkeypatch):

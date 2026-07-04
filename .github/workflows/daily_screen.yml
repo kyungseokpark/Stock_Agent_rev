@@ -123,7 +123,16 @@ jobs:
             echo "No generated changes to commit."
           else
             git commit -m "chore: update daily screening outputs [skip ci]"
-            git push
+            for attempt in 1 2 3; do
+              if git push; then
+                break
+              fi
+              echo "Push rejected (attempt ${attempt}); rebasing on remote main."
+              git pull --rebase origin main
+              if [[ "${attempt}" == "3" ]]; then
+                git push
+              fi
+            done
           fi
 
       - name: Upload GitHub Pages artifact

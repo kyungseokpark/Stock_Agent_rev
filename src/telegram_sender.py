@@ -9,6 +9,8 @@ from pathlib import Path
 import pandas as pd
 import requests
 
+from src.report_builder import display_label
+
 LOGGER = logging.getLogger(__name__)
 
 CHART_TYPE_LABELS = {
@@ -27,8 +29,42 @@ CHART_TYPE_LABELS = {
 }
 
 
+DECISION_LABELS = {
+    "Strong Candidate": "강한 후보",
+    "Candidate": "관심 후보",
+    "Watchlist": "관찰 후보",
+    "Excluded": "제외",
+}
+
+
 def _chart(value) -> str:
     return CHART_TYPE_LABELS.get(str(value), str(value))
+
+
+def _decision(value) -> str:
+    return DECISION_LABELS.get(str(value), str(value))
+
+
+def _has_value(value) -> bool:
+    if value is None:
+        return False
+    try:
+        if pd.isna(value):
+            return False
+    except (TypeError, ValueError):
+        pass
+    text = str(value).strip()
+    return text not in {"", "nan", "None", "-"}
+
+
+def _num(value, digits: int = 2) -> str:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+    if number == int(number):
+        return f"{int(number):,}"
+    return f"{number:,.{digits}f}"
 
 
 def build_telegram_message(top5_df: pd.DataFrame, stats: dict | None = None) -> str:
@@ -46,6 +82,8 @@ def build_telegram_message(top5_df: pd.DataFrame, stats: dict | None = None) -> 
                 f"최종 후보: Top {stats.get('selected_top_candidates', len(top5_df))}",
             ]
         )
+        if stats.get("regime_note"):
+            lines.append(f"장세 안내: {stats['regime_note']}")
     lines.append("")
     lines.extend(
         [
@@ -54,6 +92,7 @@ def build_telegram_message(top5_df: pd.DataFrame, stats: dict | None = None) -> 
             "- 유동성 미달 종목은 경고 표시했습니다.",
             "- 손익비 기준 미달 종목은 주의 표시했습니다.",
             "- 낙폭과대 착시형 차트는 점수 페널티를 적용했습니다.",
+            "- 후보 5개 확보를 위해 기준 미달 종목은 '보충 후보'로 사유와 함께 표기했습니다.",
             "",
         ]
     )
@@ -75,8 +114,27 @@ def build_telegram_message(top5_df: pd.DataFrame, stats: dict | None = None) -> 
             score_parts.append(f"세력 {force}점")
 
         score_str = " | ".join(score_parts) if score_parts else f"점수 {row.get('final_score')}점"
-        ticker_line = f"{idx + 1}. {row.get('ticker')} ({score_str}) / {_chart(row.get('chart_type'))}"
+        ticker_line = f"{idx + 1}. {display_label(row)} ({score_str}) / {_chart(row.get('chart_type'))}"
+        if _has_value(row.get("decision")):
+            ticker_line += f" [{_decision(row.get('decision'))}]"
         lines.append(ticker_line)
+
+        # 보충 후보 표기 (점수·손익비·분산·장세 기준 미달 사유)
+        if _has_value(row.get("selection_note")):
+            lines.append(f"  - 참고: {row.get('selection_note')}")
+
+        # 현재가 및 최근 흐름
+        price_details = []
+        if _has_value(row.get("current_price")):
+            price_details.append(f"현재가 {_num(row.get('current_price'))}")
+        if _has_value(row.get("return_1d")):
+            price_details.append(f"전일 {float(row.get('return_1d')):+.2f}%")
+        if _has_value(row.get("return_5d")):
+            price_details.append(f"5일 {float(row.get('return_5d')):+.2f}%")
+        if _has_value(row.get("sector")) and str(row.get("sector")) != "Unknown":
+            price_details.append(f"섹터 {row.get('sector')}")
+        if price_details:
+            lines.append(f"  - 시세: {', '.join(price_details)}")
 
         # 핵심 지표 정보
         metrics = []
@@ -104,8 +162,21 @@ def build_telegram_message(top5_df: pd.DataFrame, stats: dict | None = None) -> 
         if inflow_details:
             lines.append(f"  - 수급: {', '.join(inflow_details)}")
 
-        # 거래 설정 가격 (1차/2차 목표가, 손절가, 손익비)
-        lines.append(f"  - 가격: 1차 {row.get('target1')} / 2차 {row.get('target2')} / 손절 {row.get('stop_loss')} (손익비: {row.get('risk_reward')})")
+        # 거래 설정 가격 (1차/2차 목표가, 손절가, 손익비, 기대수익률)
+        target1_txt = _num(row.get("target1"))
+        target2_txt = _num(row.get("target2"))
+        stop_txt = _num(row.get("stop_loss"))
+        if _has_value(row.get("expected_return_1")):
+            target1_txt += f"({float(row.get('expected_return_1')):+.2f}%)"
+        if _has_value(row.get("expected_return_2")):
+            target2_txt += f"({float(row.get('expected_return_2')):+.2f}%)"
+        if _has_value(row.get("downside_risk")):
+            stop_txt += f"(-{abs(float(row.get('downside_risk'))):.2f}%)"
+        lines.append(f"  - 가격: 1차 {target1_txt} / 2차 {target2_txt} / 손절 {stop_txt} (손익비: {row.get('risk_reward')})")
+
+        # 포지션 제안 (계좌·리스크 설정 기반)
+        if _has_value(row.get("position_size")) and float(row.get("position_size") or 0) > 0:
+            lines.append(f"  - 포지션 제안: {_num(row.get('position_size'))}주 (약 {_num(row.get('position_value'))})")
 
         # 개별 종목 분석 의견 및 주의점
         reason = row.get("selection_reason")
@@ -114,9 +185,16 @@ def build_telegram_message(top5_df: pd.DataFrame, stats: dict | None = None) -> 
             lines.append(f"  - 분석: {reason}")
         if caution_val and str(caution_val) != "nan" and caution_val != "-":
             lines.append(f"  - 주의: {caution_val}")
+        if _has_value(row.get("consecutive_recommendation_comment")):
+            lines.append(f"  - 연속추천: {row.get('consecutive_recommendation_comment')}")
+        if _has_value(row.get("sector_concentration_warning")):
+            lines.append(f"  - 섹터집중: {row.get('sector_concentration_warning')}")
+        if _has_value(row.get("liquidity_warning")):
+            lines.append(f"  - 유동성: {row.get('liquidity_warning')}")
         lines.append("")
 
-    lines.append("Claude 모바일 복붙용 프롬프트가 이어서 전송됩니다.")
+    if not top5_df.empty:
+        lines.append("Claude 모바일 복붙용 프롬프트가 이어서 전송됩니다.")
     if stats and (stats.get("market_regime") or stats.get("market_comment")):
         lines.append("")
         lines.append(f"시장 분위기: {stats.get('market_regime', '-')}. {stats.get('market_comment', '')}")
@@ -124,7 +202,7 @@ def build_telegram_message(top5_df: pd.DataFrame, stats: dict | None = None) -> 
     for _, row in top5_df.reset_index(drop=True).iterrows():
         caution = row.get("caution") or row.get("chase_risk_warning") or row.get("risk_reward_message")
         if caution:
-            caution_lines.append(f"{row.get('name', row.get('ticker'))}: {caution}")
+            caution_lines.append(f"{display_label(row)}: {caution}")
     if caution_lines:
         lines.append("")
         lines.append("[핵심 주의점 요약]")

@@ -197,14 +197,41 @@ def build_report(full_df: pd.DataFrame, top5_df: pd.DataFrame, config: dict) -> 
     return "\n".join(lines)
 
 
+def display_label(row) -> str:
+    """종목 표시명: 종목 이름 우선, 한국 종목은 접미사(.KS/.KQ) 없는 코드만 병기."""
+    ticker = str(row.get("ticker") or "")
+    name = row.get("name")
+    try:
+        has_name = name is not None and not pd.isna(name) and str(name).strip() not in {"", "nan", "None", "-"}
+    except (TypeError, ValueError):
+        has_name = bool(name)
+    code = ticker
+    upper = ticker.upper()
+    if upper.endswith(".KS") or upper.endswith(".KQ"):
+        code = ticker[: ticker.rfind(".")]
+    if has_name and str(name) != ticker:
+        return f"{name} ({code})"
+    return ticker
+
+
+def _selection_note(row) -> str:
+    note = row.get("selection_note")
+    if note is None or pd.isna(note):
+        return ""
+    text = str(note).strip()
+    return "" if text in {"", "nan", "-"} else text
+
+
 def build_claude_mobile_prompt(top5_df: pd.DataFrame, config: dict | None = None, max_chars: int = 3800) -> str:
     market_label = (config or {}).get("market", {}).get("label", "미국장")
+    count = len(top5_df)
     lines = [
         "Claude 검수 요청",
         "",
-        f"아래는 {market_label} 전일 차트 기반 상승 후보 Top 5 결과다. 단기 차트 후보 검수 관점에서 판단해줘.",
+        f"아래는 {market_label} 전일 차트 기반 상승 후보 Top {count} 결과다. 단기 차트 후보 검수 관점에서 판단해줘.",
         "투자 조언이 아니라 기술적 조건 검수용 자료입니다.",
         "각 종목을 공격 후보, 관심 후보, 관찰 후보, 제외 후보로 다시 분류하고, 실제 매수 전 확인해야 할 조건을 짧게 정리해 주세요.",
+        "점수 기준 미달이지만 정보 제공을 위해 포함한 '보충 후보'는 참고 표기를 확인해 더 보수적으로 판단해 주세요.",
         "",
     ]
     if config:
@@ -215,18 +242,21 @@ def build_claude_mobile_prompt(top5_df: pd.DataFrame, config: dict | None = None
                     f"분석 대상: {stats.get('universe_label', stats.get('universe_mode', 'custom'))}",
                     f"전체 로드 종목 수: {stats.get('raw_tickers_loaded', 0)}개",
                     f"필터 통과 종목 수: {stats.get('passed_liquidity_filter', 0)}개",
-                    "",
                 ]
             )
-    lines.extend(["Top 5 후보", ""])
+            if stats.get("regime_note"):
+                lines.append(f"장세 안내: {stats['regime_note']}")
+            lines.append("")
+    lines.extend([f"Top {count} 후보", ""])
 
     for idx, row in top5_df.reset_index(drop=True).iterrows():
         evidence = _first_points(row.get("evidence_points", []), 2)
         risks = _first_points(row.get("risk_points", []), 2)
         lines.extend(
             [
-                f"{idx + 1}. {row.get('ticker')} / {row.get('name')}",
-                f"- 점수: {row.get('final_score')}점",
+                f"{idx + 1}. {display_label(row)}",
+                f"- 점수: {row.get('final_score')}점"
+                + (f" (종합 {row.get('composite_score')}점)" if not pd.isna(row.get("composite_score", pd.NA)) else ""),
                 f"- 판단: {_decision(row.get('decision'))}",
                 f"- 차트 유형: {_chart(row.get('chart_type'))}",
                 f"- 현재가: {_fmt(row.get('current_price'))}",
@@ -235,9 +265,13 @@ def build_claude_mobile_prompt(top5_df: pd.DataFrame, config: dict | None = None
                 f"- 손절가: {_fmt(row.get('stop_loss'))}",
                 f"- 1차 목표가: {_fmt(row.get('target1'))}",
                 f"- 2차 목표가: {_fmt(row.get('target2'))}",
-                "- 선정 근거:",
+                f"- 손익비: {_fmt(row.get('risk_reward'))}",
             ]
         )
+        note = _selection_note(row)
+        if note:
+            lines.append(f"- 참고: {note}")
+        lines.append("- 선정 근거:")
         lines.extend([f"  {point}" for point in evidence] or ["  뚜렷한 선정 근거가 제한적입니다."])
         lines.append("- 주의 요인:")
         lines.extend([f"  {point}" for point in risks] or ["  별도 주요 위험 신호는 제한적입니다."])
@@ -246,8 +280,8 @@ def build_claude_mobile_prompt(top5_df: pd.DataFrame, config: dict | None = None
     lines.extend(
         [
             "검수 요청:",
-            "1. Top 5의 우선순위를 다시 정렬해 주세요.",
-            "2. 과열, 거래량 부족, 손익비 부족 후보는 제외 또는 하향해 주세요.",
+            f"1. Top {count}의 우선순위를 다시 정렬해 주세요.",
+            "2. 과열, 거래량 부족, 손익비 부족, 보충 후보는 제외 또는 하향해 주세요.",
             "3. 각 종목별 진입 전 확인 조건을 2~3개로 요약해 주세요.",
         ]
     )
@@ -266,8 +300,15 @@ def build_claude_mobile_prompt(top5_df: pd.DataFrame, config: dict | None = None
         risks = _first_points(row.get("risk_points", []), 1)
         compact_lines.extend(
             [
-                f"{idx + 1}. {row.get('ticker')} / {row.get('name')}: {row.get('final_score')}점, {_decision(row.get('decision'))}, {_chart(row.get('chart_type'))}",
+                f"{idx + 1}. {display_label(row)}: {row.get('final_score')}점, {_decision(row.get('decision'))}, {_chart(row.get('chart_type'))}",
                 f"현재가 {_fmt(row.get('current_price'))}, RSI {_fmt(row.get('rsi14'), 1)}, 거래량 {_fmt(row.get('volume_ratio'))}배, 손절 {_fmt(row.get('stop_loss'))}, 목표 {_fmt(row.get('target1'))}/{_fmt(row.get('target2'))}",
+            ]
+        )
+        note = _selection_note(row)
+        if note:
+            compact_lines.append(f"참고: {note}")
+        compact_lines.extend(
+            [
                 f"근거: {evidence[0] if evidence else '제한적'}",
                 f"주의: {risks[0] if risks else '제한적'}",
                 "",

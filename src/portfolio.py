@@ -35,9 +35,11 @@ def apply_portfolio_constraints(
     selected_rows = []
     sector_counts: dict[str, int] = {}
     selected_tickers: list[str] = []
+    skipped: list[tuple[pd.Series, str]] = []
     for _, row in candidates.iterrows():
         sector = str(row.get("sector") or "Unknown")
         if (sector != "Unknown" or cap_unknown_sector) and sector_counts.get(sector, 0) >= sector_cap:
+            skipped.append((row, f"섹터({sector}) 집중 한도 초과"))
             continue
         ticker = str(row.get("ticker"))
         frame = histories.get(ticker)
@@ -53,6 +55,7 @@ def apply_portfolio_constraints(
                     correlated = True
                     break
         if correlated:
+            skipped.append((row, "기존 후보와 상관관계 높음"))
             continue
         enriched = row.copy()
         sizing = calculate_position_size(row.get("current_price", 0), row.get("atr14", 0), config)
@@ -63,4 +66,15 @@ def apply_portfolio_constraints(
         sector_counts[sector] = sector_counts.get(sector, 0) + 1
         if len(selected_rows) >= top_n:
             break
+    # 분산 제약으로 top_n을 못 채우면 제외된 후보를 사유 표기 후 보충한다.
+    for row, reason in skipped:
+        if len(selected_rows) >= top_n:
+            break
+        enriched = row.copy()
+        sizing = calculate_position_size(row.get("current_price", 0), row.get("atr14", 0), config)
+        for key, value in sizing.items():
+            enriched[key] = value
+        note = str(row.get("selection_note") or "")
+        enriched["selection_note"] = f"{note}; 분산 기준 예외 포함: {reason}" if note else f"분산 기준 예외 포함: {reason}"
+        selected_rows.append(enriched)
     return pd.DataFrame(selected_rows).reset_index(drop=True)

@@ -97,7 +97,27 @@ def build_quality_metrics(
     }
 
 
+def _backfill_note(row: pd.Series, sort_score_col: str, min_score: float) -> str:
+    reasons = []
+    score = _to_float(row.get(sort_score_col))
+    if min_score > 0 and score < min_score:
+        reasons.append(f"점수 {score:.0f}점 < 기준 {min_score:.0f}점")
+    risk_reward = _to_float(row.get("risk_reward"))
+    if risk_reward < 1.0:
+        reasons.append(f"손익비 {risk_reward:.2f} < 1.0")
+    elif row.get("passed_risk_reward_filter") is False and str(row.get("risk_reward_warning") or ""):
+        reasons.append(str(row.get("risk_reward_warning")))
+    detail = ", ".join(reasons) if reasons else "선정 기준 미달"
+    return f"기준 미달 보충 후보 ({detail})"
+
+
 def select_top_candidates(full_df: pd.DataFrame, config: dict, top_n: int) -> pd.DataFrame:
+    """Select top candidates, backfilling below-threshold rows so top_n is always met.
+
+    Sample-data rows stay excluded. Rows that fail the score/risk-reward gates can
+    still be selected as marked "보충 후보" (with the failed criteria recorded in
+    ``selection_note``) so the final list is not silently shortened.
+    """
     if full_df.empty:
         return full_df.copy()
 
@@ -109,9 +129,11 @@ def select_top_candidates(full_df: pd.DataFrame, config: dict, top_n: int) -> pd
     else:
         sort_score_col = "adjusted_score" if use_adjusted_score and "adjusted_score" in full_df.columns else "final_score"
 
-    candidate_df = full_df.copy()
-    if bool(adjustment_cfg.get("exclude_sample_data", True)) and "is_sample_data" in candidate_df.columns:
-        candidate_df = candidate_df[~candidate_df["is_sample_data"].fillna(False).astype(bool)]
+    base_pool = full_df.copy()
+    if bool(adjustment_cfg.get("exclude_sample_data", True)) and "is_sample_data" in base_pool.columns:
+        base_pool = base_pool[~base_pool["is_sample_data"].fillna(False).astype(bool)]
+
+    candidate_df = base_pool.copy()
     if bool(adjustment_cfg.get("exclude_low_risk_reward", False)) and "passed_risk_reward_filter" in candidate_df.columns:
         candidate_df = candidate_df[candidate_df["passed_risk_reward_filter"].fillna(False).astype(bool)]
     if "risk_reward" in candidate_df.columns:
@@ -132,19 +154,29 @@ def select_top_candidates(full_df: pd.DataFrame, config: dict, top_n: int) -> pd
                 min_score,
             )
 
-    if candidate_df.empty:
-        return candidate_df
-
     sort_cols = [sort_score_col]
     ascending = [False]
-    if "risk_reward" in candidate_df.columns:
+    if "risk_reward" in base_pool.columns:
         sort_cols.append("risk_reward")
         ascending.append(False)
-    if sort_score_col != "final_score" and "final_score" in candidate_df.columns:
+    if sort_score_col != "final_score" and "final_score" in base_pool.columns:
         sort_cols.append("final_score")
         ascending.append(False)
 
-    return candidate_df.sort_values(sort_cols, ascending=ascending).head(top_n).copy()
+    primary = candidate_df.sort_values(sort_cols, ascending=ascending).head(top_n).copy()
+    primary["selection_note"] = ""
+
+    if len(primary) < top_n:
+        remaining = base_pool.drop(index=primary.index, errors="ignore")
+        if not remaining.empty:
+            backfill = remaining.sort_values(sort_cols, ascending=ascending).head(top_n - len(primary)).copy()
+            backfill["selection_note"] = backfill.apply(
+                lambda row: _backfill_note(row, sort_score_col, min_score), axis=1
+            )
+            LOGGER.info("Backfilled %s below-threshold candidates to reach top_n=%s", len(backfill), top_n)
+            primary = pd.concat([primary, backfill])
+
+    return primary
 
 
 def ranking_score_column(frame: pd.DataFrame, config: dict) -> str:
