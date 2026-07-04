@@ -1,0 +1,126 @@
+market:
+  region: "us"
+  label: "US Test"
+  currency: "USD"
+
+data:
+  period: "1y"
+  interval: "1d"
+  request_timeout_seconds: 120
+  min_rows: 120
+  sample_fallback: true
+  auto_adjust: true
+
+screening:
+  top_n: 1
+  full_result_limit: 5
+  min_score_for_candidate: 50
+
+risk:
+  atr_stop_multiplier: 2.0
+  atr_target1_multiplier: 1.5
+  atr_target2_multiplier: 2.5
+  min_risk_reward: 1.2
+
+vcp:
+  min_score: 70
+  base_days: 60
+  volume_dryup_max: 0.8
+  pivot_near_pct: 2.0
+
+regime:
+  enabled: true
+  risk_off_candidate_cap: 1
+
+ranking:
+  min_rs_rank: 70
+
+mtf:
+  enabled: true
+  weekly_ma_period: 30
+
+event_filter:
+  enabled: true
+  window_days: 5
+
+portfolio:
+  account_equity: 100000
+  risk_per_trade_pct: 1.0
+  max_per_sector: 1
+  max_correlation: 0.8
+
+backtest:
+  lookback_period: "2y"
+  max_universe: 2
+  max_holding_days: 5
+  target_r: 2.0
+  min_final_score: 50
+  min_vcp_score: 70
+  commission_pct: 0.03
+  slippage_pct: 0.05
+  kr_sell_tax_pct: 0.18
+
+signal_weights:
+  base: 0.70
+  vcp: 0.15
+  rs: 0.10
+  mtf: 0.03
+  regime: 0.02
+
+force_inflow:
+  enabled: true
+  window_days: 20
+  prefer_real_data: false
+  run_with_screening: true
+  max_universe: 500
+  min_pct_for_flag: 60
+  position:
+    base: 1.2
+    neutral: 1.0
+    overheated: 0.8
+    top: 0.6
+  weights_proxy: {cmf: 0.20, obv: 0.16, vol_asym: 0.18, downvol_dry: 0.10, accum_bars: 0.12, vol_surge: 0.10, box_breakout: 0.08, sideways: 0.06}
+  penalty: {top_bear_vol: 15, fall_no_dry: 10, top_upperwick: 8, failed_breakout: 7, close_below_open_vol: 5}
+  sequence: {per_stage: 2.5, max: 15}
+
+composite:
+  enabled: true
+  mode: "blend"
+  w_chart: 0.6
+  w_force: 0.4
+  missing_force: "chart_only"
+  gate_min_force: 40
+
+universe:
+  mode: "custom"
+  custom_file: "data/test_us_tickers.csv"
+
+filters:
+  min_price: 5
+  min_avg_dollar_volume_20d: 20000000
+  min_history_days: 60
+  apply_to_custom: false
+
+scoring_adjustment:
+  use_adjusted_score: true
+  exclude_sample_data: true
+  exclude_low_risk_reward: false
+  chart_type_bonus:
+    breakout: 5
+    pullback: 3
+    ma20_reclaim: 2
+    near_high: 2
+    oversold_bounce: -3
+    falling_knife: -10
+    unknown: -2
+
+performance:
+  auto_update_tracking: false
+
+output:
+  output_dir: "output/test_us"
+  top5_csv: "output/test_us/top5.csv"
+  full_result_csv: "output/test_us/full_result.csv"
+  claude_report_md: "output/test_us/claude_input_report.md"
+  performance_tracking_csv: "output/test_us/performance_tracking.csv"
+  performance_summary_txt: "output/test_us/performance_summary.txt"

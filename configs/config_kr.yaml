@@ -1,0 +1,141 @@
+market:
+  region: "kr"
+  label: "국장"
+  currency: "KRW"
+
+data:
+  period: "2y"
+  interval: "1d"
+  request_timeout_seconds: 30
+  batch_size: 75
+  cache_dir: "data/cache/ohlcv"
+  min_rows: 120
+  sample_fallback: true
+  auto_adjust: true
+
+screening:
+  top_n: 5
+  full_result_limit: 150
+  min_score_for_candidate: 50
+
+risk:
+  atr_stop_multiplier: 2.0   # 1.5는 잔손절 잦음 -> 2.0으로 여유. 2.0~2.5 사이에서 백테스트로 비교 권장
+  atr_target1_multiplier: 1.5
+  atr_target2_multiplier: 2.5
+  min_risk_reward: 1.2
+
+vcp:
+  min_score: 70
+  base_days: 60
+  volume_dryup_max: 0.8
+  pivot_near_pct: 2.0
+
+regime:
+  enabled: true
+  risk_off_candidate_cap: 2
+
+ranking:
+  min_rs_rank: 70
+
+mtf:
+  enabled: true
+  weekly_ma_period: 30
+
+event_filter:
+  enabled: true
+  window_days: 5
+
+portfolio:
+  account_equity: 100000000
+  risk_per_trade_pct: 1.0
+  max_per_sector: 2
+  max_correlation: 0.8
+  cap_unknown_sector: false
+
+backtest:
+  lookback_period: "2y"
+  max_universe: 100
+  max_holding_days: 10
+  target_r: 2.0
+  min_final_score: 50
+  min_vcp_score: 0
+  commission_pct: 0.015
+  slippage_pct: 0.05
+  kr_sell_tax_pct: 0.18  # 2025년 이후 코스피/코스닥 증권거래세 0.18%
+
+signal_weights:
+  base: 0.60
+  vcp: 0.13
+  rs: 0.20
+  mtf: 0.02
+  regime: 0.05
+
+force_inflow:
+  enabled: true
+  window_days: 20
+  prefer_real_data: true
+  real_naver_pages: 1
+  real_fetch_limit_per_run: 30
+  run_with_screening: true
+  max_universe: 500
+  min_pct_for_flag: 60
+  position:
+    base: 1.2
+    neutral: 1.0
+    overheated: 0.8
+    top: 0.6
+  weights_real: {foreign: 0.24, inst: 0.18, foreign_streak: 0.13, foreign_share: 0.13, inst_streak: 0.08, accel: 0.08, retail_light: 0.08, healthy_credit: 0.08}
+  weights_proxy: {cmf: 0.20, obv: 0.16, vol_asym: 0.18, downvol_dry: 0.10, accum_bars: 0.12, vol_surge: 0.10, box_breakout: 0.08, sideways: 0.06}
+  penalty: {top_bear_vol: 15, fall_no_dry: 10, top_upperwick: 8, failed_breakout: 7, close_below_open_vol: 5}
+  sequence: {per_stage: 2.5, max: 15}
+
+composite:
+  enabled: true
+  mode: "blend"
+  w_chart: 0.6
+  w_force: 0.4
+  missing_force: "chart_only"
+  gate_min_force: 40
+
+universe:
+  mode: "kospi_kosdaq"
+  custom_file: "tickers_kr.csv"
+  kospi_file: "data/universe_kospi.csv"
+  kosdaq_file: "data/universe_kosdaq.csv"
+  combined_file: "data/universe_kr_combined.csv"
+  naver_file: "data/universe_kr_naver.csv"
+
+filters:
+  min_price: 1000
+  min_avg_dollar_volume_20d: 5000000000
+  min_history_days: 60
+  apply_to_custom: false
+
+sector_filter:
+  enabled: false
+  include: []
+  refresh_days: 7
+
+scoring_adjustment:
+  use_adjusted_score: true
+  exclude_sample_data: true
+  exclude_low_risk_reward: false
+  chart_type_bonus:
+    breakout: 5
+    pullback: 3
+    ma20_reclaim: 2
+    near_high: 2
+    oversold_bounce: -3
+    falling_knife: -10
+    unknown: -2
+
+performance:
+  auto_update_tracking: true
+
+output:
+  output_dir: "output/kr"
+  top5_csv: "output/kr/top5.csv"
+  full_result_csv: "output/kr/full_result.csv"
+  claude_report_md: "output/kr/claude_input_report.md"
+  performance_tracking_csv: "output/kr/performance_tracking.csv"
+  performance_summary_txt: "output/kr/performance_summary.txt"

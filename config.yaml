@@ -1,0 +1,63 @@
+data:
+  period: "1y"
+  interval: "1d"
+  min_rows: 120
+  sample_fallback: true
+
+screening:
+  top_n: 5
+  full_result_limit: 50
+  min_score_for_candidate: 50
+
+universe:
+  mode: "custom"
+  custom_file: "tickers.csv"
+  sp500_file: "data/universe_sp500.csv"
+  nasdaq100_file: "data/universe_nasdaq100.csv"
+  all_us_file: "data/universe_all_us.csv"
+  combined_file: "data/universe_combined.csv"
+  include_sp500: false
+  include_nasdaq100: false
+  include_all_us: false
+
+filters:
+  min_price: 5
+  min_avg_dollar_volume_20d: 20000000
+  min_history_days: 60
+
+scoring_adjustment:
+  use_adjusted_score: true
+  exclude_sample_data: true
+  exclude_low_risk_reward: false
+  chart_type_bonus:
+    breakout: 5
+    pullback: 3
+    ma20_reclaim: 2
+    near_high: 2
+    oversold_bounce: -3
+    falling_knife: -10
+    unknown: -2
+
+risk:
+  atr_stop_multiplier: 2.0   # 1.5는 잔손절 잦음 -> 2.0으로 여유. 2.0~2.5 사이에서 백테스트로 비교 권장
+  atr_target1_multiplier: 1.5
+  atr_target2_multiplier: 2.5
+  min_risk_reward: 1.2
+
+telegram:
+  enabled: false
+  send_claude_mobile_prompt: false
+  claude_mobile_prompt_file: "output/claude_mobile_prompt.txt"
+  send_markdown_file: false
+  markdown_file: "output/claude_input_report.md"
+  bot_token: ""
+  chat_id: ""
+
+output:
+  output_dir: "output"
+  top5_csv: "output/top5.csv"
+  full_result_csv: "output/full_result.csv"
+  claude_report_md: "output/claude_input_report.md"
+  telegram_message_txt: "output/telegram_message.txt"
+  performance_tracking_csv: "output/performance_tracking.csv"
+  performance_summary_txt: "output/performance_summary.txt"

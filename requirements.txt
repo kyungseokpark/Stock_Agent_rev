@@ -1,0 +1,14 @@
+pandas
+numpy
+yfinance
+streamlit
+plotly
+pyyaml
+requests
+python-dotenv
+pytest
+lxml
+html5lib
+beautifulsoup4
+pykrx
+pyarrow

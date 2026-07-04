@@ -1,0 +1,24 @@
+--- orig/regime.py	2026-07-01 16:14:22.627965555 +0000
++++ new/regime.py	2026-07-01 16:14:22.665965553 +0000
+@@ -12,13 +12,18 @@
+     if len(close) < 60:
+         return {"regime_state": "neutral", "regime_score": 0.5, "regime_message": "시장 레짐 이력이 부족합니다."}
+     last = float(close.iloc[-1])
++    ma20 = float(close.tail(20).mean())
+     ma50 = float(close.tail(50).mean())
+     ma200 = float(close.tail(200).mean()) if len(close) >= 200 else float(close.mean())
+     ma50_prev = float(close.iloc[:-20].tail(50).mean()) if len(close) >= 80 else ma50
+-    if last > ma200 and ma50 > ma50_prev:
++    # 단기 급락(외국인 매도 등) 조기 감지: 지수가 아직 MA200 위여도 위험회피로 전환
++    ret10 = float(close.iloc[-1] / close.iloc[-11] - 1) if len(close) > 11 else 0.0
++    drawdown = last / float(close.tail(20).max()) - 1
++    short_break = (last < ma20) or (ret10 <= -0.05) or (drawdown <= -0.07)
++    if last > ma200 and ma50 > ma50_prev and not short_break:
+         return {"regime_state": "risk_on", "regime_score": 1.0, "regime_message": "주요 지수가 장기 추세 위에 있어 롱 후보를 활성화합니다."}
+-    if last < ma200 and ma50 < ma50_prev:
+-        return {"regime_state": "risk_off", "regime_score": 0.0, "regime_message": "주요 지수의 장기 추세가 약해 롱 후보를 축소합니다."}
++    if (last < ma200 and ma50 < ma50_prev) or (short_break and last < ma50):
++        return {"regime_state": "risk_off", "regime_score": 0.0, "regime_message": "지수 단기 붕괴/장기 추세 약화로 롱 후보를 축소합니다."}
+     return {"regime_state": "neutral", "regime_score": 0.5, "regime_message": "시장 방향이 혼조여서 선별적으로 접근합니다."}
+ 
+ 

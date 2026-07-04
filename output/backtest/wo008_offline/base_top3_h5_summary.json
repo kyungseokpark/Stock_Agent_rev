@@ -1,0 +1,15 @@
+{
+  "trade_count": 22,
+  "win_rate": 50.0,
+  "expected_r": -0.0291,
+  "profit_factor": 0.897,
+  "mdd": -17.56,
+  "sharpe": -0.19,
+  "total_return_pct": -6.75,
+  "benchmark_return_pct": 34.47,
+  "is_trade_count": 9,
+  "oos_trade_count": 13,
+  "oos_expected_r": -0.284,
+  "elapsed_sec": 4.3,
+  "case": "base_top3_h5"
+}

@@ -1,0 +1,21 @@
+{
+  "trade_count": 17,
+  "win_rate": 47.06,
+  "expected_r": -0.1752,
+  "profit_factor": 0.549,
+  "mdd": -8.83,
+  "sharpe": -1.066,
+  "total_return_pct": -4.71,
+  "benchmark_return_pct": 0.0,
+  "is_trade_count": 6,
+  "oos_trade_count": 11,
+  "oos_expected_r": -0.3333,
+  "label": "smoke",
+  "config": "configs/config_us.yaml",
+  "lookback": "2y",
+  "top_n": 3,
+  "benchmark": "SPY",
+  "offline": true,
+  "requested_tickers": 40,
+  "loaded_tickers": 40
+}

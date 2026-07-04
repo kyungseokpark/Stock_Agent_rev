@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stock Agent 스크리너 진단 리포트</title>
+<style>
+:root{--bg:#0f1216;--card:#171b21;--line:#2a313b;--tx:#e6e9ee;--mut:#9aa4b2;--good:#31c48d;--bad:#f05252;--warn:#f6a609;--accent:#5b9dff;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:'Segoe UI','Malgun Gothic',system-ui,sans-serif;line-height:1.6;font-size:15px}
+.wrap{max-width:1000px;margin:0 auto;padding:32px 24px 80px}
+h1{font-size:26px;margin:0 0 4px;letter-spacing:-.3px}
+h2{font-size:20px;margin:38px 0 12px;padding-bottom:8px;border-bottom:2px solid var(--accent)}
+h3{font-size:16px;margin:22px 0 8px;color:var(--accent)}
+.sub{color:var(--mut);font-size:13px;margin-bottom:8px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:14px 0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+.kpi .big{font-size:30px;font-weight:700}
+.kpi .lbl{color:var(--mut);font-size:13px}
+.good{color:var(--good)}.bad{color:var(--bad)}.warn{color:var(--warn)}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13.5px}
+th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line)}
+th{color:var(--mut);font-weight:600;text-align:right;border-bottom:1px solid var(--accent)}
+td:first-child,th:first-child{text-align:left}
+td.l,th.l{text-align:left}
+tr:hover td{background:#1d232b}
+pre{background:#0b0e12;border:1px solid var(--line);border-radius:8px;padding:14px;overflow-x:auto;font-size:12.5px;line-height:1.5}
+code{font-family:'Consolas','D2Coding',monospace}
+.add{color:#7ee2b8}.del{color:#ff9b9b}.ctx{color:#7f8b99}
+.tag{display:inline-block;padding:1px 8px;border-radius:20px;font-size:12px;font-weight:600}
+.t-bad{background:rgba(240,82,82,.15);color:#ff9b9b}
+.t-good{background:rgba(49,196,141,.15);color:#7ee2b8}
+.t-warn{background:rgba(246,166,9,.15);color:#ffcf6b}
+.note{font-size:12.5px;color:var(--mut);border-left:3px solid var(--warn);padding:6px 12px;margin:10px 0;background:rgba(246,166,9,.06)}
+ul{margin:8px 0 8px 0;padding-left:20px}li{margin:4px 0}
+.pill{font-size:11px;color:var(--mut)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Stock Agent 스크리너 진단 & 재점수 리포트</h1>
+<div class="sub">분석 기준일 2026-07-02 · 데이터: screener_history.db (추천 77건, 추적 533건, 실행일 6/14~6/28) · 평가기준: <b>실제 성과 검증 우선</b></div>
+
+<div class="card" style="border-color:var(--bad)">
+<b>한 줄 결론.</b> 미국장 로직은 <span class="good">정상 작동</span>(점수–수익 상관 <b>0.61</b>, 승률 74%)하지만, 국장은
+<span class="bad">사실상 붕괴</span>했습니다. 점수–수익 상관이 <b>0.12</b>로 예측력이 없고, 오히려 <b>고득점 종목일수록 더 크게 하락</b>했습니다
+(adj≥75 평균 −17.5% vs adj&lt;75 −12.3%). 원인은 <b>미국장에 튜닝된 단일 점수 모델을 국장에 그대로 적용</b>했고, <b>레짐(시장국면) 게이트가 급락장을 못 걸러낸</b> 데 있습니다.
+</div>
+
+<h2>1. 국장 vs 미국장 성과 분석</h2>
+<div class="grid">
+  <div class="kpi"><div class="lbl">🇰🇷 국장 평균수익률</div><div class="big bad">−14.6%</div><div class="lbl">승률 8% · 38건 중 36건 손절</div></div>
+  <div class="kpi"><div class="lbl">🇺🇸 미국장 평균수익률</div><div class="big good">+1.5%</div><div class="lbl">승률 74% · 목표도달 19건</div></div>
+</div>
+
+<table>
+<thead><tr><th class="l">지표 (추적 최신 시점)</th><th>국장 🇰🇷</th><th>미국장 🇺🇸</th></tr></thead>
+<tbody>
+<tr><td class="l">추적 표본 수</td><td>38</td><td>31</td></tr>
+<tr><td class="l">평균 수익률</td><td class="bad">−14.6%</td><td class="good">+1.5%</td></tr>
+<tr><td class="l">중앙값 수익률</td><td class="bad">−15.4%</td><td class="good">+2.5%</td></tr>
+<tr><td class="l">승률(수익&gt;0)</td><td class="bad">8%</td><td class="good">74%</td></tr>
+<tr><td class="l">손절 우선 도달</td><td class="bad">33건</td><td>23건</td></tr>
+<tr><td class="l">목표 우선 도달</td><td>4건</td><td class="good">7건</td></tr>
+<tr><td class="l"><b>점수–수익 상관계수</b></td><td class="bad"><b>0.12</b> (예측력 없음)</td><td class="good"><b>0.61</b> (양호)</td></tr>
+<tr><td class="l">고득점(adj≥75) 평균수익</td><td class="bad">−17.5%</td><td class="good">+3.4%</td></tr>
+</tbody>
+</table>
+
+<div class="note">핵심 이상신호: 국장은 점수가 <b>높을수록</b> 더 하락했습니다. 이는 점수 모델이 국장에서 "노이즈"를 넘어 <b>역방향(anti-predictive)</b>에 가깝게 작동하고 있음을 뜻합니다. 반면 미국장은 점수↑ → 수익↑ 관계가 뚜렷합니다.</div>
+
+<h3>등급별 성과 (프로그램 판정 vs 실제)</h3>
+<table>
+<thead><tr><th class="l">시장 / 판정등급</th><th>표본</th><th>평균수익</th><th>승률</th><th class="l">해석</th></tr></thead>
+<tbody>
+<tr><td class="l">🇰🇷 Strong Candidate</td><td>3</td><td class="bad">−13.2%</td><td>0%</td><td class="l">최상위 확신 종목이 전부 손실</td></tr>
+<tr><td class="l">🇰🇷 Candidate</td><td>26</td><td class="bad">−14.1%</td><td>8%</td><td class="l">주력 후보군 붕괴</td></tr>
+<tr><td class="l">🇰🇷 Watchlist</td><td>5</td><td class="bad">−13.2%</td><td>20%</td><td class="l">—</td></tr>
+<tr><td class="l">🇰🇷 Excluded</td><td>4</td><td class="bad">−21.1%</td><td>0%</td><td class="l">제외 판정은 옳았음</td></tr>
+<tr><td class="l">🇺🇸 Strong Candidate</td><td>5</td><td class="good">+3.4%</td><td>100%</td><td class="l">최상위 확신 종목 전부 수익</td></tr>
+<tr><td class="l">🇺🇸 Candidate</td><td>21</td><td class="good">+2.3%</td><td>76%</td><td class="l">정상 작동</td></tr>
+<tr><td class="l">🇺🇸 Excluded</td><td>4</td><td class="warn">−5.3%</td><td>25%</td><td class="l">대체로 옳았으나 반등 놓친 사례 존재</td></tr>
+</tbody>
+</table>
+
+<h2>2. 현재 시점 재점수 (성과검증 기준)</h2>
+<div class="sub">프로그램의 판단이 실제 결과와 얼마나 맞았는지를 0~100 "성과검증 점수"로 환산해 프로그램 점수와 비교했습니다. (수익률·목표/손절 우선도달·경로품질 반영)</div>
+<table>
+<thead><tr><th class="l">매수판정 종목군</th><th>프로그램 평균점수</th><th>성과검증 재점수(내 기준)</th><th>괴리</th></tr></thead>
+<tbody>
+<tr><td class="l">🇰🇷 국장 매수 콜 (29건)</td><td>77</td><td class="bad">14</td><td class="bad">−63</td></tr>
+<tr><td class="l">🇺🇸 미국장 매수 콜 (26건)</td><td>80</td><td class="warn">49</td><td class="warn">−31</td></tr>
+</tbody>
+</table>
+<div class="note">국장은 프로그램이 평균 77점(강한 매수)을 준 종목들의 실제 성과 점수가 <b>14점</b>에 불과 — 점수판이 현실과 −63점 괴리. 미국장(−31)도 낙관 편향이 있으나 방향성은 유지됩니다.</div>
+
+<h3>프로그램의 최악의 오판 Top (높은 점수 → 폭락)</h3>
+<table>
+<thead><tr><th class="l">종목</th><th>시장</th><th>프로그램 점수</th><th>재점수</th><th>실제수익</th></tr></thead>
+<tbody>
+<tr><td class="l">기아</td><td>KR</td><td>84</td><td class="bad">0</td><td class="bad">−18.9%</td></tr>
+<tr><td class="l">LS ELECTRIC</td><td>KR</td><td>82</td><td class="bad">0</td><td class="bad">−21.6%</td></tr>
+<tr><td class="l">F&amp;F</td><td>KR</td><td>82</td><td class="bad">1</td><td class="bad">−14.4%</td></tr>
+<tr><td class="l">네패스</td><td>KR</td><td>79</td><td class="bad">0</td><td class="bad">−36.1%</td></tr>
+<tr><td class="l">LS에코에너지</td><td>KR</td><td>79</td><td class="bad">0</td><td class="bad">−33.6%</td></tr>
+<tr><td class="l">호텔신라</td><td>KR</td><td>77</td><td class="bad">0</td><td class="bad">−23.2%</td></tr>
+</tbody>
+</table>
+<div class="pill">※ 전부 "Pullback(눌림목)" 차트유형으로 분류 → 하락장에서 떨어지는 칼날을 반복 매수.</div>
+
+<h2>3. 순위에 들지 못한 종목 추적</h2>
+<div class="sub">Excluded/Watchlist 판정(순위 탈락) 종목의 이후 주가로 "제외 판정이 옳았는지" 검증. 미국 제외종목 현재가는 7/1 종가 기준 보강.</div>
+<table>
+<thead><tr><th class="l">종목</th><th>시장</th><th>판정</th><th>진입가</th><th>이후/현재 수익</th><th class="l">평가</th></tr></thead>
+<tbody>
+<tr><td class="l">현대차</td><td>KR</td><td>Excluded</td><td>647,000</td><td class="bad">−25.7%</td><td class="l"><span class="tag t-good">제외 정답</span></td></tr>
+<tr><td class="l">에코프로</td><td>KR</td><td>Excluded</td><td>124,000</td><td class="bad">−23.1%</td><td class="l"><span class="tag t-good">제외 정답</span></td></tr>
+<tr><td class="l">LG에너지솔루션</td><td>KR</td><td>Excluded</td><td>420,500</td><td class="bad">−21.2%</td><td class="l"><span class="tag t-good">제외 정답</span></td></tr>
+<tr><td class="l">NAVER</td><td>KR</td><td>Watchlist</td><td>248,000</td><td class="bad">−20.8%</td><td class="l"><span class="tag t-good">제외 정답</span></td></tr>
+<tr><td class="l">카카오</td><td>KR</td><td>Watchlist</td><td>41,500</td><td class="bad">−20.1%</td><td class="l"><span class="tag t-good">제외 정답</span></td></tr>
+<tr><td class="l">SKC</td><td>KR</td><td>Watchlist</td><td>144,600</td><td class="bad">−28.1%</td><td class="l"><span class="tag t-good">제외 정답</span></td></tr>
+<tr><td class="l">삼성전자</td><td>KR</td><td>Watchlist</td><td>322,500</td><td class="good">+5.3%</td><td class="l"><span class="tag t-warn">놓침(상승)</span></td></tr>
+<tr><td class="l">Qualcomm</td><td>US</td><td>Excluded</td><td>211.72</td><td class="bad">−10.5%</td><td class="l"><span class="tag t-good">제외 정답</span></td></tr>
+<tr><td class="l">Atlassian</td><td>US</td><td>Excluded</td><td>88.52</td><td class="bad">−11.0%</td><td class="l"><span class="tag t-good">제외 정답</span></td></tr>
+<tr><td class="l">Snowflake</td><td>US</td><td>Excluded</td><td>232.78</td><td class="good">+10.4%</td><td class="l"><span class="tag t-warn">놓침(현재 256.9)</span></td></tr>
+<tr><td class="l">Tesla</td><td>US</td><td>Excluded</td><td>406.43</td><td class="good">+3.6%</td><td class="l"><span class="tag t-warn">놓침(현재 421.1)</span></td></tr>
+<tr><td class="l">Apple</td><td>US</td><td>Excluded</td><td>283.78</td><td class="good">+2.0%</td><td class="l"><span class="tag t-warn">놓침(현재 289.4)</span></td></tr>
+</tbody>
+</table>
+<div class="note"><b>두 갈래 결론.</b> ① 국장 제외 판정은 거의 전부 옳았다(추가 하락) — 즉 프로그램은 국장에서 "무엇을 사지 말지"는 알지만 "무엇을 살지"는 틀린다. ② 미국장 제외 중 <b>oversold_bounce·눌림 성격의 SNOW·TSLA·AAPL은 반등을 놓쳤다</b> — 추세추종 모델이 평균회귀형 반등을 구조적으로 놓치는 false-negative.</div>
+
+<h2>4. 점수를 올릴 로직 변경안 (코드 diff)</h2>
+<div class="sub">"실제 성과 예측력"을 올리는 것이 목표. 아래 4개 축을 <code>scoring.py</code>, <code>regime.py</code>, <code>config_kr.yaml</code>에 반영. 검증: 부실 국장 종목(폭락 눌림목) 점수 <b>52→27</b>(제외로 강등), 건전한 미국 리더 <b>96→95</b>(영향 없음).</div>
+
+<h3>① 레짐 게이트 조기 감지 — 급락장을 못 거른 근본원인 수정</h3>
+<p>기존 <code>regime.py</code>는 지수가 <b>MA200 아래 &amp; MA50 하락</b>일 때만 risk_off로 봅니다. 6월 국장처럼 <b>MA200 위지만 외국인 매도로 급락</b>하는 국면은 "neutral"로 통과 → 매수 콜이 그대로 나갔습니다. 단기 급락(10일 −5%, 20일 고점대비 −7%, MA20 이탈)을 risk_off로 조기 전환합니다.</p>
+<pre><code><span class="ctx">     last = float(close.iloc[-1])</span>
+<span class="add">+    ma20 = float(close.tail(20).mean())</span>
+<span class="ctx">     ma50 = float(close.tail(50).mean())</span>
+<span class="ctx">     ma50_prev = float(close.iloc[:-20].tail(50).mean()) if len(close) >= 80 else ma50</span>
+<span class="add">+    # 단기 급락(외국인 매도 등) 조기 감지: 지수가 아직 MA200 위여도 위험회피로 전환</span>
+<span class="add">+    ret10 = float(close.iloc[-1] / close.iloc[-11] - 1) if len(close) > 11 else 0.0</span>
+<span class="add">+    drawdown = last / float(close.tail(20).max()) - 1</span>
+<span class="add">+    short_break = (last < ma20) or (ret10 <= -0.05) or (drawdown <= -0.07)</span>
+<span class="del">-    if last > ma200 and ma50 > ma50_prev:</span>
+<span class="add">+    if last > ma200 and ma50 > ma50_prev and not short_break:</span>
+<span class="ctx">         return {"regime_state": "risk_on", ...}</span>
+<span class="del">-    if last < ma200 and ma50 < ma50_prev:</span>
+<span class="add">+    if (last < ma200 and ma50 < ma50_prev) or (short_break and last < ma50):</span>
+<span class="ctx">         return {"regime_state": "risk_off", ...}</span></code></pre>
+<p class="pill">→ risk_off가 되면 <code>signal_engine.py</code>의 기존 게이트가 <code>valid=False</code>로 매수 콜 자체를 차단. 6월 국장 폭락 대부분이 이 단계에서 걸러집니다.</p>
+
+<h3>② 점수판에 레짐 승수 + 상대강도 하드게이트 (scoring.py)</h3>
+<p>기존엔 레짐이 최종점수의 <b>2%</b>만 차지해 사실상 무력했고, 지수 대비 리더십(rs_rank)이 없어도 고득점이 가능했습니다.</p>
+<pre><code><span class="ctx">         final = int(round((final*base_w + vcp*vcp_w + rs_rank*rs_w + weekly*mtf_w + regime*regime_w)/total))</span>
+<span class="ctx">         final = max(0, min(100, final))</span>
+<span class="add">+</span>
+<span class="add">+        # (A) 상대강도 하드게이트: 지수 대비 리더십 없는 종목은 Candidate 진입 불가</span>
+<span class="add">+        min_rs = _num((config or {}).get("ranking", {}).get("min_rs_rank", 0))</span>
+<span class="add">+        if min_rs and rs_rank < min_rs:</span>
+<span class="add">+            final = min(final, 64)</span>
+<span class="add">+</span>
+<span class="add">+        # (B) 레짐 승수: 중립/위험회피 국면에서 점수 자체를 축소</span>
+<span class="add">+        regime_state = str(context.get("regime_state", "neutral"))</span>
+<span class="add">+        regime_mult = {"risk_on":1.0, "neutral":0.90, "risk_off":0.70}.get(regime_state, 0.90)</span>
+<span class="add">+        final = int(round(final * regime_mult))</span>
+<span class="add">+        final = max(0, min(100, final))</span></code></pre>
+
+<h3>③ 떨어지는 칼날 방지 + RR 왜곡 차단 (scoring.py)</h3>
+<p>실패 국장 종목 대부분이 <b>MA20&lt;MA50 하락정배열</b>의 눌림목이었고, 일부는 <code>risk_reward</code>가 120·41·21처럼 <b>비현실적</b>이어서(작은 손절폭·왜곡된 목표가) +10점을 거저 받았습니다.</p>
+<pre><code><span class="del">-    risk_reward = _num(targets.get("risk_reward"))</span>
+<span class="add">+    risk_reward_raw = _num(targets.get("risk_reward"))</span>
+<span class="add">+    risk_reward = min(risk_reward_raw, 5.0)   # 비정상 RR 점수 인플레 차단</span>
+<span class="ctx">     ...</span>
+<span class="ctx">     penalty -= int(atr_pct >= 7) * 5</span>
+<span class="add">+    penalty -= int(bool(ma20) and bool(ma50) and ma20 < ma50) * 8   # 하락정배열 붕괴 감점</span>
+<span class="add">+    penalty -= int(risk_reward_raw > 10) * 8                        # 비현실적 목표/손절 기하</span></code></pre>
+
+<h3>④ 국장 가중치 재조정 (config_kr.yaml)</h3>
+<p>미국장 튜닝값을 그대로 쓰지 말고, 국장은 기술점수 의존을 낮추고 <b>지수 대비 상대강도·레짐</b> 비중을 키웁니다.</p>
+<pre><code><span class="ctx">signal_weights:</span>
+<span class="del">-  base: 0.70</span>
+<span class="del">-  vcp: 0.15</span>
+<span class="del">-  rs: 0.10</span>
+<span class="del">-  mtf: 0.03</span>
+<span class="del">-  regime: 0.02</span>
+<span class="add">+  base: 0.60      # 기술점수 비중 축소 (단일 US튜닝 모델 과신 방지)</span>
+<span class="add">+  vcp: 0.13</span>
+<span class="add">+  rs: 0.20        # 지수대비 상대강도 비중 대폭 강화</span>
+<span class="add">+  mtf: 0.02</span>
+<span class="add">+  regime: 0.05    # 레짐 비중 강화</span></code></pre>
+
+<div class="card">
+<b>검증 (before → after, 동일 입력)</b>
+<table>
+<thead><tr><th class="l">시나리오</th><th>기존 점수</th><th>개선 점수</th><th class="l">효과</th></tr></thead>
+<tbody>
+<tr><td class="l">국장형 폭락 눌림목 (risk_off, rs=40, RR=17)</td><td class="warn">52</td><td class="good">27</td><td class="l">Watchlist→Excluded 강등 ✅</td></tr>
+<tr><td class="l">건전한 미국 리더 (risk_on, rs=88, RR=2.3)</td><td>96</td><td>95</td><td class="l">승자 종목 영향 없음 ✅</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>5. 권고 우선순위</h2>
+<ul>
+<li><b>즉시(High):</b> 개선안 ①②③ 적용 후 국장 재실행 — 급락장 매수 콜 자동 차단. 첨부 <code>scoring.py.patch</code>, <code>regime.py.patch</code> 적용.</li>
+<li><b>단기:</b> <code>backtest.py</code>로 2년 구간 국장/미국장 <b>분리 재검증</b> 후 가중치(④)와 <code>atr_stop_multiplier</code>를 시장별로 최적화. 상관계수·손익비를 KPI로 추적.</li>
+<li><b>중기:</b> 미국장 false-negative(SNOW/TSLA 반등 놓침) 대응 — 추세추종과 별개로 <code>oversold_bounce</code>를 위한 "회복확인(reclaim)" 서브전략을 분리하거나, 과한 −점수 대신 별도 등급으로 분류.</li>
+<li><b>운영:</b> 추적 데이터가 6/26에서 멈춰 있음 — <code>performance_tracker</code> 자동 업데이트/스케줄러 점검 필요.</li>
+</ul>
+
+<div class="note">데이터 한계 명시: 샌드박스는 실시간 시세 API에 접근할 수 없어, 추적 성과는 DB 최신값(6/26, d+5~d+10)을 사용하고 미국 제외종목 현재가만 7/1 종가로 보강했습니다. 국장 개별 현재가·전체 재백테스트는 프로그램을 로컬에서 실행(데이터 접근 가능 환경)해 확정하시길 권합니다.</div>
+
+</div>
+</body>
+</html>

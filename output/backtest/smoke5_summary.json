@@ -1,0 +1,19 @@
+{
+  "trade_count": 0,
+  "win_rate": 0.0,
+  "expected_r": 0.0,
+  "profit_factor": 0.0,
+  "mdd": 0.0,
+  "sharpe": 0.0,
+  "total_return_pct": 0.0,
+  "benchmark_return_pct": 0.0,
+  "oos_expected_r": 0.0,
+  "label": "smoke5",
+  "config": "configs/config_us.yaml",
+  "lookback": "2y",
+  "top_n": 3,
+  "benchmark": "SPY",
+  "offline": true,
+  "requested_tickers": 5,
+  "loaded_tickers": 5
+}

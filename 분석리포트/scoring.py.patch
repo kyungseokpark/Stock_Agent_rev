@@ -1,0 +1,40 @@
+--- orig/scoring.py	2026-07-01 16:14:22.625965555 +0000
++++ new/scoring.py	2026-07-01 16:14:22.665965553 +0000
+@@ -31,7 +31,9 @@
+     high60 = _num(snapshot.get("high60"))
+     low20 = _num(snapshot.get("low20"))
+     atr_pct = _num(snapshot.get("atr_pct"))
+-    risk_reward = _num(targets.get("risk_reward"))
++    risk_reward_raw = _num(targets.get("risk_reward"))
++    # 비정상적으로 큰 RR(작은 손절폭/왜곡된 목표가)에서 오는 점수 인플레 차단
++    risk_reward = min(risk_reward_raw, 5.0)
+ 
+     trend = int(cp > ma20) * 10 + int(cp > ma50) * 8 + int(ma20 > ma50) * 7 + int(cp > ma200) * 5
+     if vr >= 1.5:
+@@ -77,6 +79,8 @@
+     penalty -= int(cp < ma50) * 8
+     penalty -= int(vr < 0.7) * 5
+     penalty -= int(atr_pct >= 7) * 5
++    penalty -= int(bool(ma20) and bool(ma50) and ma20 < ma50) * 8   # 하락 정배열 붕괴 구간 감점
++    penalty -= int(risk_reward_raw > 10) * 8                         # 비현실적 목표/손절 기하
+     penalty -= int(_num(targets.get("target1")) <= cp) * 10
+     penalty -= int(_num(targets.get("stop_loss")) >= cp) * 10
+ 
+@@ -100,6 +104,17 @@
+         final = int(round((final * base_w + vcp_score * vcp_w + rs_rank * rs_w + weekly * mtf_w + regime * regime_w) / total))
+         final = max(0, min(100, final))
+ 
++        # (A) 상대강도 하드게이트: 지수 대비 리더십 없는 종목은 Candidate 진입 불가
++        min_rs = _num((config or {}).get("ranking", {}).get("min_rs_rank", 0))
++        if min_rs and rs_rank < min_rs:
++            final = min(final, 64)
++
++        # (B) 레짐 승수: 중립/위험회피 국면에서 점수 자체를 축소 (기존 2% 가중은 사실상 무력)
++        regime_state = str(context.get("regime_state", "neutral"))
++        regime_mult = {"risk_on": 1.0, "neutral": 0.90, "risk_off": 0.70}.get(regime_state, 0.90)
++        final = int(round(final * regime_mult))
++        final = max(0, min(100, final))
++
+     if final >= 80:
+         decision = "Strong Candidate"
+     elif final >= 65:

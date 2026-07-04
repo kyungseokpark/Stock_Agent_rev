@@ -1,0 +1,22 @@
+{
+  "trade_count": 176,
+  "win_rate": 55.68,
+  "expected_r": 0.2378,
+  "profit_factor": 1.62,
+  "mdd": -12.01,
+  "sharpe": 2.822,
+  "total_return_pct": 34.0,
+  "benchmark_return_pct": 29.35,
+  "is_trade_count": 138,
+  "oos_trade_count": 38,
+  "oos_expected_r": 0.4065,
+  "label": "wo007_top10_10d_full",
+  "config": "configs/config_us.yaml",
+  "lookback": "2y",
+  "top_n": 10,
+  "holding_days": 10,
+  "benchmark": "SPY",
+  "offline": false,
+  "requested_tickers": 520,
+  "loaded_tickers": 520
+}

@@ -1,0 +1,14 @@
+pandas
+numpy
+yfinance
+pyyaml
+requests
+python-dotenv
+lxml
+html5lib
+beautifulsoup4
+pykrx
+matplotlib
+pyinstaller
+pyarrow
+ttkbootstrap
