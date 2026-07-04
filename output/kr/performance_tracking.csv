@@ -1,2 +1,6 @@
 ﻿run_date,market_region,universe_mode,ticker,name,entry_price,target1_price,target2_price,stop_price,data_quality,liquidity_warning,risk_reward_warning,days_after,tracking_date,close_price,return_pct,max_return_pct,min_return_pct,hit_target1,hit_target2,hit_stop,first_hit,status,next_open_price,next_open_gap_pct
+2026-07-04,kr,kospi_kosdaq,019210.KQ,와이지-원,22600.0,26151.79,28519.64,18776.0,good,,손익비 기준 미달: 0.77 < 1.20,,,,,,,,,,,,,
+2026-07-04,kr,kospi_kosdaq,085620.KS,미래에셋생명,20500.0,26685.36,30808.93,15551.71,good,,손익비 기준 미달: 0.95 < 1.20,,,,,,,,,,,,,
+2026-07-04,kr,kospi_kosdaq,003490.KS,대한항공,28850.0,30000.0,32760.71,27447.5,good,,손익비 기준 미달: 0.78 < 1.20,,,,,,,,,,,,,
+2026-07-04,kr,kospi_kosdaq,064290.KQ,인텍플러스,51800.0,60633.93,66523.21,43005.0,good,,손익비 기준 미달: 0.83 < 1.20,,,,,,,,,,,,,
 2026-07-04,kr,kospi_kosdaq,025560.KS,미래산업,45700.0,56307.14,60300.0,44372.5,good,,,,,,,,,,,,,,,
