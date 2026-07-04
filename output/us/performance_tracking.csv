@@ -1,3 +1,6 @@
 ﻿run_date,market_region,universe_mode,ticker,name,entry_price,target1_price,target2_price,stop_price,data_quality,liquidity_warning,risk_reward_warning,days_after,tracking_date,close_price,return_pct,max_return_pct,min_return_pct,hit_target1,hit_target2,hit_stop,first_hit,status,next_open_price,next_open_gap_pct
+2026-07-04,us,combined,MRNA,Moderna,79.76,88.08,93.62,68.67,good,,손익비 기준 미달: 0.65 < 1.20,,,,,,,,,,,,,
+2026-07-04,us,combined,DUK,Duke Energy,129.6,132.74,134.83,125.42,good,,손익비 기준 미달: 0.73 < 1.20,,,,,,,,,,,,,
+2026-07-04,us,combined,BDX,Becton Dickinson,158.08,164.5,168.78,149.52,good,,손익비 기준 미달: 0.71 < 1.20,,,,,,,,,,,,,
 2026-07-04,us,combined,EBAY,eBay Inc.,114.84,119.57,122.72,109.14,good,,손익비 기준 미달: 0.79 < 1.20,,,,,,,,,,,,,
 2026-07-04,us,combined,EIX,Edison International,75.66,75.67,75.82,72.99,good,,손익비 기준 미달: 0.00 < 1.20,,,,,,,,,,,,,
