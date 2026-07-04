@@ -60,18 +60,62 @@ def build_telegram_message(top5_df: pd.DataFrame, stats: dict | None = None) -> 
     if top5_df.empty:
         lines.append("선정된 후보 종목이 없습니다.")
     for idx, row in top5_df.reset_index(drop=True).iterrows():
-        lines.extend(
-            [
-                f"{idx + 1}. {row.get('ticker')} / {row.get('final_score')}점 / {_chart(row.get('chart_type'))}",
-                f"- RSI: {row.get('rsi14')}",
-                f"- 거래량 비율: {row.get('volume_ratio')}배",
-                f"- 손절가: {row.get('stop_loss')}",
-                f"- 1차 목표가: {row.get('target1')}",
-                f"- 2차 목표가: {row.get('target2')}",
-                f"- 손익비: {row.get('risk_reward')}",
-                "",
-            ]
-        )
+        # 기본 점수 추출
+        composite = row.get("composite_score")
+        chart = row.get("chart_score") or row.get("adjusted_score") or row.get("final_score")
+        force = row.get("force_inflow_pct")
+        force_grade_val = row.get("force_inflow_grade")
+
+        score_parts = []
+        if composite is not None and not pd.isna(composite):
+            score_parts.append(f"종합 {composite}점")
+        if chart is not None and not pd.isna(chart):
+            score_parts.append(f"차트 {chart}점")
+        if force is not None and not pd.isna(force):
+            score_parts.append(f"세력 {force}점")
+
+        score_str = " | ".join(score_parts) if score_parts else f"점수 {row.get('final_score')}점"
+        ticker_line = f"{idx + 1}. {row.get('ticker')} ({score_str}) / {_chart(row.get('chart_type'))}"
+        lines.append(ticker_line)
+
+        # 핵심 지표 정보
+        metrics = []
+        if not pd.isna(row.get("rsi14")):
+            metrics.append(f"RSI: {row.get('rsi14')}")
+        if not pd.isna(row.get("volume_ratio")):
+            metrics.append(f"거래비율: {row.get('volume_ratio')}배")
+        if not pd.isna(row.get("vcp_score")) and float(row.get("vcp_score")) > 0:
+            metrics.append(f"VCP수축: {row.get('vcp_score')}점")
+        if not pd.isna(row.get("rs_rank")) and float(row.get("rs_rank")) > 0:
+            metrics.append(f"상대강도: {row.get('rs_rank')}위")
+        if metrics:
+            lines.append(f"  - 지표: {', '.join(metrics)}")
+
+        # 세부 수급 정보 (외인/기관 비율 등이 있을 경우)
+        inflow_details = []
+        if not pd.isna(row.get("fi_foreign_pct")):
+            inflow_details.append(f"외인 {row.get('fi_foreign_pct')}%")
+        if not pd.isna(row.get("fi_inst_pct")):
+            inflow_details.append(f"기관 {row.get('fi_inst_pct')}%")
+        if not pd.isna(row.get("fi_foreign_streak")) and int(row.get("fi_foreign_streak", 0)) > 0:
+            inflow_details.append(f"외인연속 {int(row.get('fi_foreign_streak'))}일")
+        if force_grade_val and str(force_grade_val) != "nan" and force_grade_val != "disabled":
+            inflow_details.append(f"등급: {force_grade_val}")
+        if inflow_details:
+            lines.append(f"  - 수급: {', '.join(inflow_details)}")
+
+        # 거래 설정 가격 (1차/2차 목표가, 손절가, 손익비)
+        lines.append(f"  - 가격: 1차 {row.get('target1')} / 2차 {row.get('target2')} / 손절 {row.get('stop_loss')} (손익비: {row.get('risk_reward')})")
+
+        # 개별 종목 분석 의견 및 주의점
+        reason = row.get("selection_reason")
+        caution_val = row.get("caution")
+        if reason and str(reason) != "nan" and reason != "-":
+            lines.append(f"  - 분석: {reason}")
+        if caution_val and str(caution_val) != "nan" and caution_val != "-":
+            lines.append(f"  - 주의: {caution_val}")
+        lines.append("")
+
     lines.append("Claude 모바일 복붙용 프롬프트가 이어서 전송됩니다.")
     if stats and (stats.get("market_regime") or stats.get("market_comment")):
         lines.append("")
@@ -83,9 +127,10 @@ def build_telegram_message(top5_df: pd.DataFrame, stats: dict | None = None) -> 
             caution_lines.append(f"{row.get('name', row.get('ticker'))}: {caution}")
     if caution_lines:
         lines.append("")
-        lines.append("[핵심 주의점]")
+        lines.append("[핵심 주의점 요약]")
         lines.extend(caution_lines[:5])
     if stats and stats.get("performance_summary_text"):
+        lines.append("")
         lines.append(stats["performance_summary_text"])
         lines.append("")
     return "\n".join(lines)
