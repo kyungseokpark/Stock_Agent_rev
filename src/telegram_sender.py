@@ -36,6 +36,16 @@ DECISION_LABELS = {
     "Excluded": "제외",
 }
 
+FORCE_GRADE_LABELS = {
+    "strong_inflow": "강한 유입",
+    "inflow": "유입",
+    "neutral": "중립",
+    "weak": "약함",
+    "outflow": "유출",
+    "insufficient": "데이터 부족",
+    "disabled": "",
+}
+
 
 def _chart(value) -> str:
     return CHART_TYPE_LABELS.get(str(value), str(value))
@@ -43,6 +53,17 @@ def _chart(value) -> str:
 
 def _decision(value) -> str:
     return DECISION_LABELS.get(str(value), str(value))
+
+
+def _force_grade(value) -> str:
+    text = str(value or "").strip()
+    if text in {"", "nan", "None", "-"}:
+        return ""
+    if text in FORCE_GRADE_LABELS:
+        return FORCE_GRADE_LABELS[text]
+    if any("a" <= ch.lower() <= "z" for ch in text):
+        return "미분류"
+    return text
 
 
 def _has_value(value) -> bool:
@@ -161,8 +182,9 @@ def build_telegram_message(
             inflow_details.append(f"기관 {row.get('fi_inst_pct')}%")
         if not pd.isna(row.get("fi_foreign_streak")) and int(row.get("fi_foreign_streak", 0)) > 0:
             inflow_details.append(f"외인연속 {int(row.get('fi_foreign_streak'))}일")
-        if force_grade_val and str(force_grade_val) != "nan" and force_grade_val != "disabled":
-            inflow_details.append(f"등급: {force_grade_val}")
+        force_grade_text = _force_grade(force_grade_val)
+        if _has_value(force_grade_text):
+            inflow_details.append(f"등급: {force_grade_text}")
         if inflow_details:
             lines.append(f"  - 세력: {', '.join(inflow_details)}")
 
@@ -204,7 +226,8 @@ def build_telegram_message(
         for idx, row in force_top5_df.reset_index(drop=True).iterrows():
             overlap = " ★종합 Top5 포함" if str(row.get("ticker")) in composite_tickers else ""
             grade = row.get("force_inflow_grade")
-            grade_txt = f", 등급 {grade}" if _has_value(grade) and str(grade) != "disabled" else ""
+            grade_text = _force_grade(grade)
+            grade_txt = f", 등급 {grade_text}" if _has_value(grade_text) else ""
             lines.append(
                 f"{idx + 1}. {display_label(row)} — 세력 {row.get('force_inflow_pct')}점{grade_txt}"
                 f" / 종합 {row.get('composite_score')}점 / {_chart(row.get('chart_type'))}{overlap}"
@@ -242,6 +265,51 @@ def build_telegram_message(
         lines.append("")
         lines.append(stats["performance_summary_text"])
         lines.append("")
+    return "\n".join(lines)
+
+
+def build_compact_telegram_message(
+    top5_df: pd.DataFrame,
+    stats: dict | None = None,
+    force_top5_df: pd.DataFrame | None = None,
+) -> str:
+    """Build the single short Telegram message sent for one market run."""
+    market_label = stats.get("market_label", "") if stats else ""
+    selected = stats.get("selected_top_candidates", len(top5_df)) if stats else len(top5_df)
+    title = f"[{market_label} Top {selected} 요약]" if market_label else f"[Top {selected} 요약]"
+    lines = [title]
+
+    if stats:
+        universe = stats.get("universe_label", stats.get("universe_mode", "custom"))
+        loaded = stats.get("unique_tickers", stats.get("raw_tickers_loaded", 0))
+        passed = stats.get("passed_liquidity_filter", 0)
+        lines.append(f"Universe: {universe} / loaded {loaded} / passed {passed}")
+        if stats.get("market_regime") or stats.get("market_comment"):
+            lines.append(f"Market: {stats.get('market_regime', '-')}. {stats.get('market_comment', '')}".strip())
+
+    if top5_df.empty:
+        lines.append("No selected candidates.")
+    else:
+        for idx, row in top5_df.reset_index(drop=True).iterrows():
+            score = row.get("composite_score")
+            if not _has_value(score):
+                score = row.get("final_score")
+            parts = []
+            if _has_value(score):
+                parts.append(f"score {_num(score)}")
+            if _has_value(row.get("current_price")):
+                parts.append(f"price {_num(row.get('current_price'))}")
+            if _has_value(row.get("risk_reward")):
+                parts.append(f"RR {row.get('risk_reward')}")
+            if _has_value(row.get("target1")) and _has_value(row.get("stop_loss")):
+                parts.append(f"T1 {_num(row.get('target1'))} / SL {_num(row.get('stop_loss'))}")
+            suffix = f" ({', '.join(parts)})" if parts else ""
+            lines.append(f"{idx + 1}. {display_label(row)}{suffix}")
+
+    if force_top5_df is not None and not force_top5_df.empty:
+        force_names = [display_label(row) for _, row in force_top5_df.reset_index(drop=True).head(5).iterrows()]
+        lines.append(f"Force leaders: {', '.join(force_names)}")
+
     return "\n".join(lines)
 
 
