@@ -40,9 +40,9 @@ from src.recommendation_quality import (
 )
 from src.ranking import rank_relative_strength
 from src.portfolio import apply_portfolio_constraints
-from src.report_builder import build_claude_mobile_prompt, write_outputs
+from src.report_builder import write_outputs
 from src.signal_engine import generate_signal
-from src.telegram_sender import build_telegram_message, get_telegram_credentials, send_text_messages
+from src.telegram_sender import build_compact_telegram_message, get_telegram_credentials, send_text_messages
 from src.universe_loader import liquidity_metrics, load_universe
 
 
@@ -530,11 +530,8 @@ def _send_optional_notification(
     token, chat_id = get_telegram_credentials(config)
     top_n = int(config.get("screening", {}).get("top_n", 5))
     force_top5_df = select_force_leaders(full_df, top_n) if full_df is not None else None
-    message = build_telegram_message(top5_df, paths.get("stats", {}), force_top5_df=force_top5_df)
+    message = build_compact_telegram_message(top5_df, paths.get("stats", {}), force_top5_df=force_top5_df)
     send_text_messages(message, token, chat_id)
-    if not top5_df.empty:
-        prompt = build_claude_mobile_prompt(top5_df, config)
-        send_text_messages(prompt, token, chat_id)
 
 
 def run_from_args(args: argparse.Namespace) -> int:
