@@ -28,6 +28,7 @@ def build_evidence(snapshot: dict, score: dict, targets: dict, chart_type: str) 
     evidence = []
     risks = []
     cp = snapshot.get("current_price", 0)
+    dema_stoch_signals = score.get("dema_stoch_signals", {})
 
     if cp > snapshot.get("ma20", 0) and cp > snapshot.get("ma50", 0):
         evidence.append("현재가가 20일선과 50일선 위에 있어 단기 추세가 양호합니다.")
@@ -41,6 +42,14 @@ def build_evidence(snapshot: dict, score: dict, targets: dict, chart_type: str) 
         evidence.append("MACD가 시그널선 위에 있어 모멘텀이 개선되고 있습니다.")
     if targets.get("risk_reward", 0) >= 1.5:
         evidence.append("손익비가 1.5 이상으로 단기 관찰 조건이 비교적 양호합니다.")
+    if dema_stoch_signals.get("dema60_breakout"):
+        volume_ratio = snapshot.get("volume_ratio", 0)
+        volume_text = f" + 거래량 {volume_ratio:.1f}x" if dema_stoch_signals.get("vol_surge") else ""
+        evidence.append(f"DEMA(60) 상향 돌파{volume_text}가 확인됐습니다.")
+    elif dema_stoch_signals.get("dema60_slope_up"):
+        evidence.append("DEMA(60)가 상승 기울기를 유지해 추세를 보강합니다.")
+    if dema_stoch_signals.get("stoch_d_cross_50_up"):
+        evidence.append("스토캐스틱 %D가 50선을 상향 돌파해 모멘텀을 확인합니다.")
 
     if snapshot.get("rsi14", 0) >= 70:
         risks.append("RSI가 70 이상이라 단기 과열 가능성을 확인해야 합니다.")
@@ -54,6 +63,10 @@ def build_evidence(snapshot: dict, score: dict, targets: dict, chart_type: str) 
         risks.append("손익비가 1.2 미만이라 매매 조건의 질이 낮습니다.")
     if snapshot.get("atr_pct", 0) >= 7:
         risks.append("ATR 비율이 높아 변동성이 크고 손절 관리 부담이 있습니다.")
+    if dema_stoch_signals.get("candle_overheat"):
+        risks.append("돌파봉 이격 또는 당일 급등이 커 추격 매수 과열에 주의해야 합니다.")
+    if dema_stoch_signals.get("atr_stop_excess"):
+        risks.append("ATR 대비 손절폭이 커 포지션 규모와 손실 한도를 재확인해야 합니다.")
 
     if not evidence:
         evidence.append("현재 규칙 기준으로 뚜렷한 긍정적 기술 신호는 제한적입니다.")

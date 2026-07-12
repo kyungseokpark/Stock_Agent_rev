@@ -18,6 +18,23 @@ screening:
   full_result_limit: 150
   min_score_for_candidate: 50
 
+indicators:
+  dema_period: 60
+  stoch_period: 60
+  stoch_d_smooth: 3
+
+scoring:
+  dema_stoch:
+    enabled: true
+    vol_surge_mult: 1.5
+    overheat_gap_pct: 8.0
+    candle_return_pct: 5.0
+    atr_stop_excess_mult: 2.5
+    report_columns_enabled: true
+    net_cap: 3
+    net_floor: -2
+    weights: {dema60_breakout: 2, dema60_slope_up: 1, stoch_d_cross_50_up: 1, vol_surge: 2, index_above: 1, candle_overheat: -1, atr_stop_excess: -1}
+
 risk:
   atr_stop_multiplier: 2.0   # 1.5는 잔손절 잦음 -> 2.0으로 여유. 2.0~2.5 사이에서 백테스트로 비교 권장
   atr_target1_multiplier: 1.5

@@ -63,9 +63,22 @@ def calculate_cmf(df: pd.DataFrame, period: int = 20) -> pd.Series:
     return money_flow_volume.rolling(period).sum() / volume.rolling(period).sum().replace(0, np.nan)
 
 
-def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
+def _positive_int(value, default: int) -> int:
+    """Return a positive integer configuration value without raising."""
+    try:
+        value = int(value)
+    except (TypeError, ValueError):
+        return default
+    return value if value > 0 else default
+
+
+def add_indicators(df: pd.DataFrame, config: dict | None = None) -> pd.DataFrame:
     """Return OHLCV data with moving averages and indicators."""
     out = df.copy()
+    indicator_cfg = (config or {}).get("indicators", {})
+    dema_period = _positive_int(indicator_cfg.get("dema_period"), 60)
+    stoch_period = _positive_int(indicator_cfg.get("stoch_period"), 60)
+    stoch_d_smooth = _positive_int(indicator_cfg.get("stoch_d_smooth"), 3)
     out["ma20"] = out["Close"].rolling(20).mean()
     out["ma50"] = out["Close"].rolling(50).mean()
     out["ma200"] = out["Close"].rolling(200).mean()
@@ -75,12 +88,23 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     out["volume_avg20"] = out["Volume"].rolling(20).mean()
     out["obv"] = calculate_obv(out["Close"], out["Volume"])
     out["cmf20"] = calculate_cmf(out, 20)
+    dema_ema = out["Close"].ewm(span=dema_period, adjust=False, min_periods=dema_period).mean()
+    out["dema60"] = 2 * dema_ema - dema_ema.ewm(span=dema_period, adjust=False).mean()
+    stoch_low = out["Low"].rolling(stoch_period, min_periods=stoch_period).min()
+    stoch_high = out["High"].rolling(stoch_period, min_periods=stoch_period).max()
+    stoch_range = (stoch_high - stoch_low).replace(0, np.nan)
+    out["stoch_k"] = (out["Close"] - stoch_low) / stoch_range * 100
+    out["stoch_d"] = out["stoch_k"].rolling(stoch_d_smooth, min_periods=stoch_d_smooth).mean()
     return out
 
 
-def build_indicator_snapshot(df: pd.DataFrame) -> dict:
+def build_indicator_snapshot(df: pd.DataFrame, config: dict | None = None) -> dict:
     """Build the latest indicator snapshot used by scoring."""
-    enriched = add_indicators(df)
+    indicator_cfg = (config or {}).get("indicators", {})
+    dema_period = _positive_int(indicator_cfg.get("dema_period"), 60)
+    stoch_period = _positive_int(indicator_cfg.get("stoch_period"), 60)
+    stoch_d_smooth = _positive_int(indicator_cfg.get("stoch_d_smooth"), 3)
+    enriched = add_indicators(df, config=config)
     latest = enriched.iloc[-1]
     prev = enriched.iloc[-2] if len(enriched) > 1 else latest
     close = enriched["Close"]
@@ -88,6 +112,15 @@ def build_indicator_snapshot(df: pd.DataFrame) -> dict:
     volume = float(latest["Volume"])
     current = float(latest["Close"])
     atr14 = float(latest.get("atr14", np.nan))
+    required_rows = max(dema_period + 1, stoch_period + stoch_d_smooth)
+    dema_stoch_ready = len(enriched) >= required_rows
+
+    def _indicator_value(row: pd.Series, key: str):
+        if not dema_stoch_ready:
+            return None
+        value = row.get(key, np.nan)
+        return float(value) if pd.notna(value) else None
+
     snapshot = {
         "current_price": current,
         "previous_close": float(prev["Close"]),
@@ -114,6 +147,11 @@ def build_indicator_snapshot(df: pd.DataFrame) -> dict:
         "high252": float(close.tail(252).max()),
         "low20": float(close.tail(20).min()),
         "low60": float(close.tail(60).min()),
+        "dema60": _indicator_value(latest, "dema60"),
+        "dema60_prev": _indicator_value(prev, "dema60"),
+        "stoch_k": _indicator_value(latest, "stoch_k"),
+        "stoch_d": _indicator_value(latest, "stoch_d"),
+        "stoch_d_prev": _indicator_value(prev, "stoch_d"),
         "history": enriched,
     }
     return snapshot

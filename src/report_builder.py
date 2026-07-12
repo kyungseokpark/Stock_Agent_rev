@@ -128,12 +128,21 @@ def build_report(full_df: pd.DataFrame, top5_df: pd.DataFrame, config: dict) -> 
         )
 
     lines.extend(["", "---", "", "## 2. Top 5 요약표", ""])
-    lines.append("| 순위 | 티커 | 종목명 | 점수 | 판단 | 차트 유형 | RSI | 거래량 비율 | 손절가 | 1차 목표가 | 2차 목표가 | 손익비 |")
-    lines.append("|---:|---|---|---:|---|---|---:|---:|---:|---:|---:|---:|")
+    dema_stoch_columns = bool(config.get("scoring", {}).get("dema_stoch", {}).get("report_columns_enabled", True))
+    headers = "| 순위 | 티커 | 종목명 | 점수 | 판단 | 차트 유형 | RSI | 거래량 비율 |"
+    separators = "|---:|---|---|---:|---|---|---:|---:|"
+    if dema_stoch_columns:
+        headers += " DEMA(60) | %D | DEMA/스토캐스틱 가점 |"
+        separators += "---:|---:|---:|"
+    lines.append(headers + " 손절가 | 1차 목표가 | 2차 목표가 | 손익비 |")
+    lines.append(separators + "---:|---:|---:|---:|")
     for _, row in top5_df.iterrows():
+        dema_stoch_cells = ""
+        if dema_stoch_columns:
+            dema_stoch_cells = f" {_fmt(row.get('dema60'))} | {_fmt(row.get('stoch_d'))} | {_fmt(row.get('dema_stoch_bonus'))} |"
         lines.append(
             f"| {row['rank']} | {row['ticker']} | {row['name']} | {row['final_score']} | {_decision(row['decision'])} | "
-            f"{_chart(row['chart_type'])} | {_fmt(row['rsi14'])} | {_fmt(row['volume_ratio'])} | {_fmt(row['stop_loss'])} | "
+            f"{_chart(row['chart_type'])} | {_fmt(row['rsi14'])} | {_fmt(row['volume_ratio'])} |{dema_stoch_cells} {_fmt(row['stop_loss'])} | "
             f"{_fmt(row['target1'])} | {_fmt(row['target2'])} | {_fmt(row['risk_reward'])} |"
         )
 

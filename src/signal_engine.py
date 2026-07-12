@@ -38,7 +38,7 @@ def generate_signal(
         return {"valid_signal": False, "exclude_reason": "insufficient_rows", **quality}
 
     context = context or {}
-    snapshot = build_indicator_snapshot(clean)
+    snapshot = build_indicator_snapshot(clean, config=config)
     vcp = score_vcp(clean, snapshot, config)
     mtf = weekly_trend_context(clean, config)
     regime = context.get("regime") or regime_from_market_summary(context.get("market_summary"))

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import math
 
+from .signals import dema_stoch_signals
+
 
 def _num(value, default: float = 0.0) -> float:
     try:
@@ -11,6 +13,20 @@ def _num(value, default: float = 0.0) -> float:
     except (TypeError, ValueError):
         return default
     return default if math.isnan(value) else value
+
+
+def dema_stoch_bonus(signals: dict[str, bool], config: dict | None) -> tuple[float, list[str]]:
+    """Calculate the capped DEMA/Stochastic supplementary score."""
+    settings = (config or {}).get("scoring", {}).get("dema_stoch", {})
+    if not settings.get("enabled", False):
+        return 0.0, []
+
+    weights = settings.get("weights", {})
+    reasons = [name for name, active in signals.items() if active and _num(weights.get(name))]
+    raw_bonus = sum(_num(weights.get(name)) for name in reasons)
+    net_cap = _num(settings.get("net_cap"))
+    net_floor = _num(settings.get("net_floor"))
+    return min(net_cap, max(net_floor, raw_bonus)), reasons
 
 
 def calculate_score(snapshot: dict, targets: dict, context: dict | None = None, config: dict | None = None) -> dict:
@@ -109,6 +125,10 @@ def calculate_score(snapshot: dict, targets: dict, context: dict | None = None, 
         final = int(round(final * regime_mult))
         final = max(0, min(100, final))
 
+    dema_stoch_signal_values = dema_stoch_signals({**snapshot, **targets}, config or {})
+    dema_bonus, dema_bonus_reasons = dema_stoch_bonus(dema_stoch_signal_values, config)
+    final = max(0, min(100, int(round(final + dema_bonus))))
+
     if final >= 80:
         decision = "Strong Candidate"
     elif final >= 65:
@@ -138,6 +158,9 @@ def calculate_score(snapshot: dict, targets: dict, context: dict | None = None, 
         "position_score": position,
         "risk_reward_score": rr_score,
         "risk_penalty": penalty,
+        "dema_stoch_bonus": dema_bonus,
+        "dema_stoch_bonus_reasons": dema_bonus_reasons,
+        "dema_stoch_signals": dema_stoch_signal_values,
         "base_score": max(0, min(100, int(round(raw)))),
         "final_score": final,
         "decision": decision,

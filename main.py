@@ -58,7 +58,7 @@ def setup_logging() -> None:
 def build_row(meta: dict, snapshot: dict, targets: dict, score: dict, chart_type: str, evidence: dict) -> dict:
     row = {k: v for k, v in snapshot.items() if k != "history"}
     row.update(targets)
-    row.update(score)
+    row.update({k: v for k, v in score.items() if k != "dema_stoch_signals"})
     row.update(evidence)
     row.update(chart_type=chart_type)
     row.update(meta)
@@ -408,6 +408,7 @@ def run_screen(config: dict, top_n: int | None = None, progress_cb=None) -> tupl
             "fi_vol_asym",
             "fi_box_breakout",
             "fi_accum_bar_ratio",
+            "dema_stoch_bonus",
         ]
         for col in numeric_cols:
             if col in full_df.columns:
