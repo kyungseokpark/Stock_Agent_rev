@@ -1,4 +1,9 @@
 ﻿run_date,market_region,universe_mode,ticker,name,entry_price,target1_price,target2_price,stop_price,data_quality,liquidity_warning,risk_reward_warning,days_after,tracking_date,close_price,return_pct,max_return_pct,min_return_pct,hit_target1,hit_target2,hit_stop,first_hit,status,next_open_price,next_open_gap_pct
+2026-08-17,kr,kospi_kosdaq,161510.KS,PLUS 고배당주,25575.0,26726.68,27352.53,24741.38,good,,,,,,,,,,,,,,,
+2026-08-17,kr,kospi_kosdaq,005950.KS,이수화학,15650.0,17568.93,18848.21,13492.0,good,,손익비 기준 미달: 0.77 < 1.20,,,,,,,,,,,,,
+2026-08-17,kr,kospi_kosdaq,175330.KS,JB금융지주,28000.0,29350.0,31905.38,27247.85,good,,,,,,,,,,,,,,,
+2026-08-17,kr,kospi_kosdaq,012330.KS,현대모비스,547000.0,595282.15,627470.24,488006.92,good,,손익비 기준 미달: 0.73 < 1.20,,,,,,,,,,,,,
+2026-08-17,kr,kospi_kosdaq,003550.KS,LG,120000.0,128475.0,134125.0,108700.0,good,,손익비 기준 미달: 0.68 < 1.20,,,,,,,,,,,,,
 2026-08-14,kr,kospi_kosdaq,058730.KS,다스코,3670.0,4197.68,4549.46,3522.25,good,,,,,,,,,,,,,,,
 2026-08-14,kr,kospi_kosdaq,005950.KS,이수화학,15650.0,17568.93,18848.21,13492.0,good,,손익비 기준 미달: 0.77 < 1.20,,,,,,,,,,,,,
 2026-08-14,kr,kospi_kosdaq,175330.KS,JB금융지주,28000.0,29350.0,31905.38,27247.85,good,,,,,,,,,,,,,,,
