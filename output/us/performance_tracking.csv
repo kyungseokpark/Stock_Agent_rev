@@ -1,4 +1,9 @@
 ﻿run_date,market_region,universe_mode,ticker,name,entry_price,target1_price,target2_price,stop_price,data_quality,liquidity_warning,risk_reward_warning,days_after,tracking_date,close_price,return_pct,max_return_pct,min_return_pct,hit_target1,hit_target2,hit_stop,first_hit,status,next_open_price,next_open_gap_pct
+2026-08-29,us,combined,SNOW,Snowflake,329.11,337.38,360.08,323.46,good,,,,,,,,,,,,,,,
+2026-08-29,us,combined,JNJ,Johnson & Johnson,265.77,273.14,278.81,262.45,good,,,,,,,,,,,,,,,
+2026-08-29,us,combined,BALL,Ball Corporation,63.37,65.13,66.31,63.14,good,,,,,,,,,,,,,,,
+2026-08-29,us,combined,WELL,Welltower,239.6,241.56,250.48,235.45,good,,손익비 기준 미달: 0.46 < 1.20,,,,,,,,,,,,,
+2026-08-29,us,combined,SLB,Schlumberger,55.01,57.28,58.01,52.55,good,,손익비 기준 미달: 0.88 < 1.20,,,,,,,,,,,,,
 2026-08-28,us,combined,SNOW,Snowflake,329.11,337.38,360.08,323.46,good,,,,,,,,,,,,,,,
 2026-08-28,us,combined,JNJ,Johnson & Johnson,265.77,273.14,278.81,262.45,good,,,,,,,,,,,,,,,
 2026-08-28,us,combined,BALL,Ball Corporation,63.37,65.13,66.31,63.14,good,,,,,,,,,,,,,,,
