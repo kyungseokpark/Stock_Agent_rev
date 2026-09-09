@@ -1,4 +1,9 @@
 ﻿run_date,market_region,universe_mode,ticker,name,entry_price,target1_price,target2_price,stop_price,data_quality,liquidity_warning,risk_reward_warning,days_after,tracking_date,close_price,return_pct,max_return_pct,min_return_pct,hit_target1,hit_target2,hit_stop,first_hit,status,next_open_price,next_open_gap_pct
+2026-09-09,us,combined,INCY,Incyte,126.75,129.72,129.93,125.21,good,,,,,,,,,,,,,,,
+2026-09-09,us,combined,BEN,Franklin Resources,34.73,35.03,35.77,34.06,good,,손익비 기준 미달: 0.44 < 1.20,,,,,,,,,,,,,
+2026-09-09,us,combined,BMY,Bristol Myers Squibb,66.82,68.09,70.59,66.2,good,,,,,,,,,,,,,,,
+2026-09-09,us,combined,STT,State Street Corporation,194.26,200.52,204.7,190.41,good,,,,,,,,,,,,,,,
+2026-09-09,us,combined,MU,Micron Technology,1016.59,1086.61,1133.28,943.3,good,,손익비 기준 미달: 0.89 < 1.20,,,,,,,,,,,,,
 2026-09-08,us,combined,INCY,Incyte,126.75,129.72,129.93,125.21,good,,,,,,,,,,,,,,,
 2026-09-08,us,combined,BEN,Franklin Resources,34.73,35.03,35.77,34.06,good,,손익비 기준 미달: 0.44 < 1.20,,,,,,,,,,,,,
 2026-09-08,us,combined,BMY,Bristol Myers Squibb,66.82,68.09,70.59,66.2,good,,,,,,,,,,,,,,,
