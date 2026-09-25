@@ -1,4 +1,9 @@
 ﻿run_date,market_region,universe_mode,ticker,name,entry_price,target1_price,target2_price,stop_price,data_quality,liquidity_warning,risk_reward_warning,days_after,tracking_date,close_price,return_pct,max_return_pct,min_return_pct,hit_target1,hit_target2,hit_stop,first_hit,status,next_open_price,next_open_gap_pct
+2026-09-25,kr,kospi_kosdaq,066570.KS,LG전자,209000.0,216500.0,231250.0,203925.0,good,,,,,,,,,,,,,,,
+2026-09-25,kr,kospi_kosdaq,010120.KS,LS ELECTRIC,205500.0,218550.0,227250.0,204600.0,good,,,,,,,,,,,,,,,
+2026-09-25,kr,kospi_kosdaq,007340.KS,DN오토모티브,47900.0,49600.0,53426.79,46595.0,good,,,,,,,,,,,,,,,
+2026-09-25,kr,kospi_kosdaq,034730.KS,SK,611000.0,612000.0,681357.14,571750.0,good,,손익비 기준 미달: 0.02 < 1.20,,,,,,,,,,,,,
+2026-09-25,kr,kospi_kosdaq,396300.KQ,세아메카닉스,6010.0,6612.46,7014.11,5206.71,good,,손익비 기준 미달: 0.65 < 1.20,,,,,,,,,,,,,
 2026-09-24,kr,kospi_kosdaq,066570.KS,LG전자,209000.0,216500.0,231250.0,203925.0,good,,,,,,,,,,,,,,,
 2026-09-24,kr,kospi_kosdaq,010120.KS,LS ELECTRIC,205500.0,218550.0,227250.0,204600.0,good,,,,,,,,,,,,,,,
 2026-09-24,kr,kospi_kosdaq,007340.KS,DN오토모티브,47900.0,49600.0,53426.79,46595.0,good,,,,,,,,,,,,,,,
